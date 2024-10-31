@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">CSCI 310 Project 2 Tree Hole</string>
+    <string name="sign_up">Sign Up!</string>
+    <string name="login">Log In</string>
+    <string name="pass">Password</string>
+    <string name="usc_id">USC ID</string>
+    <string name="email">USC Email (***@usc.edu)</string>
 </resources>

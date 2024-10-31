@@ -1,67 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:gravity="center_horizontal">
 
-    <TextView
-        android:id="@+id/log_label"
-        android:layout_width="150dp"
-        android:layout_height="103dp"
-        android:text="Log In"
-        tools:layout_editor_absoluteX="130dp"
-        tools:layout_editor_absoluteY="82dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+    <!-- EditText for Email Input -->
+    <EditText
+        android:id="@+id/semail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/email"
+        android:autofillHints="treehole@usc.edu"
+        android:inputType="textEmailAddress"
+        android:layout_marginBottom="8dp" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="305dp"
-        android:layout_height="55dp"
-        tools:layout_editor_absoluteX="1dp"
-        tools:layout_editor_absoluteY="245dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+    <!-- EditText for Password Input -->
+    <EditText
+        android:id="@+id/spassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="@string/pass"
+        android:inputType="textPassword"
+        android:layout_marginBottom="16dp" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="username" />
-    </com.google.android.material.textfield.TextInputLayout>
+    <!-- EditText for USC ID Input -->
+    <EditText
+        android:id="@+id/sid"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:autofillHints="0123456789"
+        android:hint="@string/usc_id"
+        android:inputType="numberPassword"
+        android:layout_marginBottom="16dp" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="305dp"
-        android:layout_height="55dp"
-        tools:layout_editor_absoluteX="1dp"
-        tools:layout_editor_absoluteY="545dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+    <!-- Login Button -->
+    <Button
+        android:id="@+id/signup_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/sign_up"
+        android:layout_marginTop="16dp" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="email" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="305dp"
-        android:layout_height="55dp"
-        tools:layout_editor_absoluteX="1dp"
-        tools:layout_editor_absoluteY="245dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <com.google.android.material.textfield.TextInputEditText
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="password" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

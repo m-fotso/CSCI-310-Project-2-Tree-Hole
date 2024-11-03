@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This is a vector drawable representing an academic icon (graduation cap) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+
+    <path
+        android:fillColor="@color/white"
+        android:pathData="M12,3L1,9l11,6 9,-4.91V14h2V9L12,3zM12,13L3.74,8.55 12,4.09l8.26,4.46L12,13zM5,10.91v4.27l7,3.82 7,-3.82V10.91l-7,3.82L5,10.91z"/>
+</vector>

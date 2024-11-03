@@ -1,47 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
+<ScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center_horizontal">
+    android:layout_height="match_parent">
 
-    <!-- EditText for Email Input -->
-    <EditText
-        android:id="@+id/semail"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/email"
-        android:autofillHints="treehole@usc.edu"
-        android:inputType="textEmailAddress"
-        android:layout_marginBottom="8dp" />
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center_horizontal">
 
-    <!-- EditText for Password Input -->
-    <EditText
-        android:id="@+id/spassword"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="@string/pass"
-        android:inputType="textPassword"
-        android:layout_marginBottom="16dp" />
+        <!-- App Name or Logo -->
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="32dp" />
 
-    <!-- EditText for USC ID Input -->
-    <EditText
-        android:id="@+id/sid"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:autofillHints="0123456789"
-        android:hint="@string/usc_id"
-        android:inputType="numberPassword"
-        android:layout_marginBottom="16dp" />
+        <!-- Full Name Input -->
+        <EditText
+            android:id="@+id/name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/name"
+            android:layout_marginBottom="16dp" />
 
-    <!-- Login Button -->
-    <Button
-        android:id="@+id/signup_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/sign_up"
-        android:layout_marginTop="16dp" />
+        <!-- USC Email Input -->
+        <EditText
+            android:id="@+id/semail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/email"
+            android:inputType="textEmailAddress"
+            android:layout_marginBottom="16dp" />
 
-</LinearLayout>
+        <!-- Password Input -->
+        <EditText
+            android:id="@+id/spassword"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/pass"
+            android:inputType="textPassword"
+            android:layout_marginBottom="16dp" />
+
+        <!-- USC ID Input -->
+        <EditText
+            android:id="@+id/sid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/usc_id"
+            android:inputType="number"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Role Spinner -->
+        <Spinner
+            android:id="@+id/role_spinner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:prompt="@string/select_role"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Sign Up Button -->
+        <Button
+            android:id="@+id/signup_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sign_up"
+            android:layout_marginTop="24dp" />
+
+        <!-- Back to Login Button -->
+        <Button
+            android:id="@+id/back_to_login_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Back to Login"
+            android:layout_marginTop="16dp" />
+
+    </LinearLayout>
+</ScrollView>

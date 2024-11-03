@@ -1,8 +1,30 @@
 <resources>
-    <string name="app_name">CSCI 310 Project 2 Tree Hole</string>
-    <string name="sign_up">Sign Up!</string>
+    <string name="app_name">USC Tree Hole</string>
     <string name="login">Log In</string>
+    <string name="sign_up">Sign Up</string>
     <string name="pass">Password</string>
     <string name="usc_id">USC ID</string>
     <string name="email">USC Email (***@usc.edu)</string>
+    <string name="name">Full Name</string>
+    <!-- Removed "upload_profile_photo" string -->
+    <string name="dont_have_account">Dont have an account? Sign Up!</string>
+    <string name="please_fill_all_fields">Please fill all fields.</string>
+    <string name="incorrect_credentials">Incorrect USC email or password.</string>
+    <string name="account_created">Account created successfully.</string>
+    <string name="login_failed">Login failed. Check your credentials.</string>
+    <string name="profile">Profile</string>
+    <string name="role">Role</string>
+    <string name="select_role">Select Role</string>
+    <string name="please_use_usc_email">Please use a valid USC email.</string>
+    <string name="invalid_usc_id">Please enter a valid 10-digit USC ID.</string>
+    <!-- Removed "profile_photo_selected" string -->
+    <!-- Roles Array -->
+    <string-array name="roles_array">
+        <item>Undergraduate Student</item>
+        <item>Graduate Student</item>
+        <item>Faculty</item>
+        <item>Staff</item>
+    </string-array>
 </resources>
+
+

@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- USC Brand Colors -->
+    <color name="colorPrimary">#990000</color>        <!-- USC Cardinal Red -->
+    <color name="colorPrimaryDark">#7C0000</color>    <!-- Darker USC Red -->
+    <color name="colorAccent">#FFC72C</color>         <!-- USC Gold -->
+
+    <!-- Text Colors -->
+    <color name="textPrimary">#212121</color>         <!-- Dark Gray for Text -->
+    <color name="textSecondary">#757575</color>       <!-- Medium Gray for Secondary Text -->
+
+    <!-- UI Colors -->
+    <color name="backgroundColor">#FFFFFF</color>      <!-- White Background -->
+    <color name="dividerColor">#EEEEEE</color>        <!-- Light Gray for Dividers -->
+
+    <!-- Standard Colors -->
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Bottom Navigation Colors -->
+    <color name="bottom_nav_item_color">#FFFFFFFF</color>
 </resources>

@@ -2,20 +2,12 @@ package com.example.csci310project2treehole;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.AuthResult;
-import androidx.annotation.NonNull;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import android.widget.Toast;
+import androidx.appcompat.widget.AppCompatImageView;
 
-
-import androidx.annotation.Nullable;
 
 import com.google.firebase.auth.FirebaseAuth;
 
@@ -24,41 +16,60 @@ public class LoginActivity extends BaseActivity {
     private FirebaseAuth mAuth;
     private EditText emailEditText, passwordEditText;
     private Button loginButton;
+    private TextView signupText;
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_login);
 
-        // Firebase Auth instance
+        // Initialize Firebase Auth
         mAuth = FirebaseAuth.getInstance();
+
+        // If user is already logged in, navigate to MainActivity
+        if (mAuth.getCurrentUser() != null) {
+            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+            finish();
+        }
 
         // Connect UI components
         emailEditText = findViewById(R.id.email);
         passwordEditText = findViewById(R.id.password);
         loginButton = findViewById(R.id.login_button);
+        signupText = findViewById(R.id.signup_text);
 
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String email = emailEditText.getText().toString();
-                String password = passwordEditText.getText().toString();
+        // Handle login button click
+        loginButton.setOnClickListener(v -> {
+            String email = emailEditText.getText().toString().trim();
+            String password = passwordEditText.getText().toString().trim();
+            if (email.isEmpty() || password.isEmpty()) {
+                Toast.makeText(LoginActivity.this, "Please enter email and password.", Toast.LENGTH_SHORT).show();
+            } else {
                 loginUser(email, password);
             }
+        });
+
+        // Handle sign-up text click
+        signupText.setOnClickListener(v -> {
+            Intent intent = new Intent(LoginActivity.this, SignUpActivity.class);
+            startActivity(intent);
         });
     }
 
     private void loginUser(String email, String password) {
+        // Use Firebase Authentication to sign in
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        // Navigate to the main feed
+                        // Login successful, navigate to MainActivity
                         startActivity(new Intent(LoginActivity.this, MainActivity.class));
                         finish();
                     } else {
-                        // Login failed
-                        Toast.makeText(LoginActivity.this, "Login failed. Check your credentials.", Toast.LENGTH_SHORT).show();
+                        // Login failed, show error message
+                        Toast.makeText(LoginActivity.this, getString(R.string.incorrect_credentials), Toast.LENGTH_SHORT).show();
                     }
                 });
     }
 }
+
+

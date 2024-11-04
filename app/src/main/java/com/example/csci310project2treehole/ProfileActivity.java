@@ -1,8 +1,11 @@
 package com.example.csci310project2treehole;
 
+import static androidx.core.app.ActivityCompat.startActivityForResult;
+
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -12,7 +15,7 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Toast;
-
+import android.net.Uri;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -20,7 +23,8 @@ import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
-
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +39,9 @@ public class ProfileActivity extends AppCompatActivity {
     private DatabaseReference userRef;
     private User currentUser;
     private boolean isEditing = false;
+    private int REQUEST_IMAGE_PICK = 1;
+    private String userId;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,11 +52,11 @@ public class ProfileActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         FirebaseUser firebaseUser = mAuth.getCurrentUser();
         if (firebaseUser == null) {
-            startActivity(new Intent(ProfileActivity.this, LoginActivity.class));
+            startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
-        String userId = firebaseUser.getUid();
+        userId = firebaseUser.getUid();
         userRef = FirebaseDatabase.getInstance().getReference().child("users").child(userId);
 
         // Initialize UI components
@@ -99,10 +106,33 @@ public class ProfileActivity extends AppCompatActivity {
         logoutButton.setOnClickListener(v -> logoutUser());
 
         profileImageView.setOnClickListener(v -> {
+            Intent pickIntent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            startActivityForResult(pickIntent, REQUEST_IMAGE_PICK);
             Toast.makeText(this, "Profile image change feature coming soon", Toast.LENGTH_SHORT).show();
         });
     }
 
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == REQUEST_IMAGE_PICK && resultCode == RESULT_OK && data != null) {
+            Uri imageUri = data.getData();
+            profileImageView.setImageURI(imageUri);
+            uploadImageToFirebase(imageUri);
+        }
+    }
+
+    private void uploadImageToFirebase(Uri imageUri) {
+        FirebaseStorage storage = FirebaseStorage.getInstance();
+        StorageReference storageRef = storage.getReference().child("profile_pictures/"+userId+".jpg");
+        storageRef.putFile(imageUri).addOnSuccessListener(taskSnapshot->storageRef.getDownloadUrl().addOnSuccessListener(uri-> {
+            saveImageUrlToDatabase(uri.toString());
+        })).addOnFailureListener(e->Toast.makeText(this, "Image upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    private void saveImageUrlToDatabase(String imageUrl) {
+        DatabaseReference databaseRef = FirebaseDatabase.getInstance().getReference("users").child(userId);
+        databaseRef.child("profileImageUrl").setValue(imageUrl).addOnSuccessListener(aVoid -> Toast.makeText(this, "Profile picture updataed successfully", Toast.LENGTH_SHORT).show()).addOnFailureListener(e->Toast.makeText(this, "Failed to update profile picture: "+e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
     private void loadUserData() {
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override

@@ -110,6 +110,7 @@ public class SignUpActivity extends AppCompatActivity {
             String email = emailEditText.getText().toString().trim();
             String password = passwordEditText.getText().toString().trim();
             String uscid = uscidEditText.getText().toString().trim();
+
             String role = roleSpinner.getSelectedItem().toString();
 
             if (validateInputs(name, email, password, uscid)) {

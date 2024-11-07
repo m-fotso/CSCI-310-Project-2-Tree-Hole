@@ -8,18 +8,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.view.View;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.Spinner;
-import android.widget.Toast;
+import android.util.Log;
+import android.widget.*;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
 
@@ -29,12 +22,13 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.*;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
-public class ProfileActivity extends AppCompatActivity {
+public class ProfileActivity extends BaseActivity {
+    private static final String TAG = "ProfileActivity";
     private static final int PERMISSION_REQUEST_CODE = 123;
 
     private Toolbar toolbar;
@@ -46,28 +40,34 @@ public class ProfileActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
     private DatabaseReference userRef;
+    private FirebaseStorage storage;
     private StorageReference storageReference;
     private User currentUser;
     private String userId;
     private boolean isEditing = false;
+    private Uri selectedImageUri = null;
 
     private ActivityResultLauncher<String> imagePickerLauncher;
+    private static final String PROFILE_IMAGES_FOLDER = "profile_images";
+    private StorageReference profileImagesRef;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_profile);
 
-        // Initialize Firebase
-        initializeFirebase();
+        // Initialize Firebase Storage reference for profile images
+        storageReference = FirebaseStorage.getInstance().getReference();
+        profileImagesRef = storageReference.child(PROFILE_IMAGES_FOLDER);
 
+        // Rest of initialization
+        initializeFirebase();
         if (mAuth.getCurrentUser() == null) {
             startActivity(new Intent(this, LoginActivity.class));
             finish();
             return;
         }
 
-        // Initialize UI and setup components
         initializeViews();
         setupToolbar();
         setupSpinner();
@@ -76,15 +76,25 @@ public class ProfileActivity extends AppCompatActivity {
         loadUserData();
     }
 
+
     private void initializeFirebase() {
         mAuth = FirebaseAuth.getInstance();
         FirebaseUser firebaseUser = mAuth.getCurrentUser();
         if (firebaseUser != null) {
             userId = firebaseUser.getUid();
-            userRef = FirebaseDatabase.getInstance().getReference()
-                    .child("users").child(userId);
-            storageReference = FirebaseStorage.getInstance().getReference()
-                    .child("profile_images");
+            userRef = databaseReference.child("users").child(userId);
+
+            // Check if storage is properly initialized
+            if (storageReference != null) {
+                Log.d(TAG, "Firebase initialized for user: " + userId);
+                Log.d(TAG, "Storage bucket: " + storageReference.getBucket());
+            } else {
+                Log.e(TAG, "Storage reference is null, reinitializing...");
+                firebaseStorage = FirebaseStorage.getInstance();
+                storageReference = firebaseStorage.getReference();
+            }
+        } else {
+            Log.e(TAG, "Firebase User is null.");
         }
     }
 
@@ -118,6 +128,16 @@ public class ProfileActivity extends AppCompatActivity {
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     if (uri != null) {
+                        selectedImageUri = uri;
+                        Log.d(TAG, "Image selected: " + uri.toString());
+
+                        // Show the selected image immediately
+                        Glide.with(this)
+                                .load(uri)
+                                .placeholder(R.drawable.ic_default_profile)
+                                .into(profileImageView);
+
+                        // Upload the image
                         uploadProfileImage(uri);
                     }
                 }
@@ -146,22 +166,122 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
+    private void uploadProfileImage(Uri imageUri) {
+        if (imageUri == null) {
+            Log.e(TAG, "uploadProfileImage: imageUri is null.");
+            return;
+        }
+
+        // Use the storage reference from BaseActivity
+        if (storageReference == null) {
+            Log.e(TAG, "Storage reference is null");
+            return;
+        }
+
+        Toast.makeText(this, "Starting upload...", Toast.LENGTH_SHORT).show();
+
+        try {
+            // Create filename with timestamp and user ID
+            String timestamp = String.valueOf(System.currentTimeMillis());
+            String filename = "profile_" + userId + "_" + timestamp + ".jpg";
+
+            // Create reference to the file using the base storageReference
+            StorageReference fileRef = storageReference.child(PROFILE_IMAGES_FOLDER).child(filename);
+
+            // Start upload
+            UploadTask uploadTask = fileRef.putFile(imageUri);
+
+            uploadTask
+                    .addOnProgressListener(taskSnapshot -> {
+                        double progress = (100.0 * taskSnapshot.getBytesTransferred()) / taskSnapshot.getTotalByteCount();
+                        Log.d(TAG, String.format("Upload is %.2f%% done", progress));
+                    })
+                    .addOnSuccessListener(taskSnapshot -> fileRef.getDownloadUrl()
+                            .addOnSuccessListener(uri -> {
+                                String imageUrl = uri.toString();
+                                updateProfileImageUrl(imageUrl);
+                                Toast.makeText(ProfileActivity.this, "Upload successful!", Toast.LENGTH_SHORT).show();
+                            }))
+                    .addOnFailureListener(e -> {
+                        Log.e(TAG, "Upload failed", e);
+                        Toast.makeText(ProfileActivity.this, "Upload failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+
+        } catch (Exception e) {
+            Log.e(TAG, "Error in upload process", e);
+            Toast.makeText(this, "Upload error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void deleteOldProfileImage(String oldImageUrl) {
+        if (oldImageUrl != null && !oldImageUrl.equals("default_profile_image_url")) {
+            try {
+                // Extract the old file path from the URL
+                StorageReference oldImageRef = FirebaseStorage.getInstance().getReferenceFromUrl(oldImageUrl);
+                oldImageRef.delete()
+                        .addOnSuccessListener(aVoid -> {
+                            Log.d(TAG, "Old profile image deleted successfully");
+                        })
+                        .addOnFailureListener(e -> {
+                            Log.e(TAG, "Error deleting old profile image", e);
+                        });
+            } catch (IllegalArgumentException e) {
+                Log.w(TAG, "Invalid old image URL: " + oldImageUrl);
+            }
+        }
+    }
+
+    private void updateProfileImageUrl(String newImageUrl) {
+        if (userRef == null || newImageUrl == null) {
+            Log.e(TAG, "updateProfileImageUrl: Invalid parameters.");
+            return;
+        }
+
+        // Store old image URL for deletion after successful update
+        String oldImageUrl = currentUser != null ? currentUser.getProfileImageUrl() : null;
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("profileImageUrl", newImageUrl);
+
+        userRef.updateChildren(updates)
+                .addOnSuccessListener(aVoid -> {
+                    if (currentUser != null) {
+                        // Delete old image after successful update
+                        if (oldImageUrl != null && !oldImageUrl.equals(newImageUrl)) {
+                            deleteOldProfileImage(oldImageUrl);
+                        }
+                        currentUser.setProfileImageUrl(newImageUrl);
+                    }
+                    Toast.makeText(ProfileActivity.this, "Profile photo updated", Toast.LENGTH_SHORT).show();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Failed to update profile URL", e);
+                    Toast.makeText(ProfileActivity.this,
+                            "Failed to update database: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
     private void loadUserData() {
+        if (userRef == null) {
+            Log.e(TAG, "loadUserData: userRef is null.");
+            Toast.makeText(this, "User reference is null.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         userRef.addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 currentUser = snapshot.getValue(User.class);
                 if (currentUser != null) {
-                    // Populate UI with user data
                     nameEditText.setText(currentUser.getName());
                     uscidEditText.setText(currentUser.getUscid());
+
                     int spinnerPosition = ((ArrayAdapter) roleSpinner.getAdapter())
                             .getPosition(currentUser.getRole());
                     roleSpinner.setSelection(spinnerPosition);
 
-                    // Load profile image
                     String imageUrl = currentUser.getProfileImageUrl();
-                    if (imageUrl != null && !imageUrl.equals("default_profile_image_url")) {
+                    if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.equals("default_profile_image_url")) {
                         Glide.with(ProfileActivity.this)
                                 .load(imageUrl)
                                 .placeholder(R.drawable.ic_default_profile)
@@ -171,77 +291,34 @@ public class ProfileActivity extends AppCompatActivity {
                     }
 
                     enableEditing(false);
+                } else {
+                    Log.e(TAG, "loadUserData: currentUser is null.");
+                    Toast.makeText(ProfileActivity.this, "Failed to load user data.", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError error) {
-                Toast.makeText(ProfileActivity.this,
-                        "Failed to load user data: " + error.getMessage(),
-                        Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "loadUserData:onCancelled", error.toException());
+                Toast.makeText(ProfileActivity.this, "Failed to load user data: " + error.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void checkPermissionAndPickImage() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
-                    != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(
-                        new String[]{Manifest.permission.READ_MEDIA_IMAGES},
-                        PERMISSION_REQUEST_CODE
-                );
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_MEDIA_IMAGES}, PERMISSION_REQUEST_CODE);
             } else {
                 imagePickerLauncher.launch("image/*");
             }
         } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(
-                        new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
-                        PERMISSION_REQUEST_CODE
-                );
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, PERMISSION_REQUEST_CODE);
             } else {
                 imagePickerLauncher.launch("image/*");
             }
         }
-    }
-
-    private void uploadProfileImage(Uri imageUri) {
-        String imageName = userId + "_" + UUID.randomUUID().toString();
-        StorageReference imageRef = storageReference.child(imageName);
-
-        imageRef.putFile(imageUri)
-                .continueWithTask(task -> {
-                    if (!task.isSuccessful()) {
-                        throw task.getException();
-                    }
-                    return imageRef.getDownloadUrl();
-                })
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        String downloadUrl = task.getResult().toString();
-                        updateProfileImageUrl(downloadUrl);
-                    } else {
-                        Toast.makeText(this, "Failed to upload image", Toast.LENGTH_SHORT).show();
-                    }
-                });
-    }
-
-    private void updateProfileImageUrl(String imageUrl) {
-        userRef.child("profileImageUrl").setValue(imageUrl)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        currentUser.setProfileImageUrl(imageUrl);
-                        Glide.with(this)
-                                .load(imageUrl)
-                                .placeholder(R.drawable.ic_default_profile)
-                                .into(profileImageView);
-                        Toast.makeText(this, "Profile photo updated", Toast.LENGTH_SHORT).show();
-                    } else {
-                        Toast.makeText(this, "Failed to update profile photo", Toast.LENGTH_SHORT).show();
-                    }
-                });
     }
 
     private void enableEditing(boolean enable) {
@@ -250,6 +327,7 @@ public class ProfileActivity extends AppCompatActivity {
         uscidEditText.setEnabled(enable);
         roleSpinner.setEnabled(enable);
         editProfileButton.setText(enable ? "Save" : "Edit Profile");
+        profileImageView.setAlpha(enable ? 0.8f : 1.0f);
     }
 
     private void saveProfileChanges() {
@@ -261,27 +339,21 @@ public class ProfileActivity extends AppCompatActivity {
             return;
         }
 
-        Map<String, Boolean> subscriptions = currentUser.getSubscriptions() != null ?
-                currentUser.getSubscriptions() : new HashMap<>();
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("name", newName);
+        updates.put("uscid", newUscid);
+        updates.put("role", newRole);
 
-        User updatedUser = new User(
-                newName,
-                currentUser.getEmail(),
-                newUscid,
-                newRole,
-                currentUser.getProfileImageUrl(),
-                subscriptions
-        );
-
-        userRef.setValue(updatedUser).addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show();
-                currentUser = updatedUser;
-                enableEditing(false);
-            } else {
-                Toast.makeText(this, "Failed to update profile", Toast.LENGTH_SHORT).show();
-            }
-        });
+        userRef.updateChildren(updates)
+                .addOnSuccessListener(aVoid -> {
+                    Toast.makeText(this, "Profile updated successfully", Toast.LENGTH_SHORT).show();
+                    enableEditing(false);
+                    loadUserData();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "saveProfileChanges: Failed to update profile", e);
+                    Toast.makeText(this, "Failed to update profile: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
     }
 
     private boolean validateInputs(String name, String uscid) {
@@ -304,8 +376,7 @@ public class ProfileActivity extends AppCompatActivity {
                 .setMessage("Are you sure you want to log out?")
                 .setPositiveButton("Yes", (dialog, which) -> {
                     mAuth.signOut();
-                    startActivity(new Intent(this, LoginActivity.class)
-                            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP));
+                    startActivity(new Intent(this, LoginActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP));
                     finish();
                 })
                 .setNegativeButton("No", null)
@@ -319,8 +390,7 @@ public class ProfileActivity extends AppCompatActivity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 imagePickerLauncher.launch("image/*");
             } else {
-                Toast.makeText(this, "Permission required to change profile photo",
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Permission required to change profile photo", Toast.LENGTH_SHORT).show();
             }
         }
     }

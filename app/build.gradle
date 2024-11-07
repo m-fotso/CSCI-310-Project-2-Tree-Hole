@@ -15,34 +15,35 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        // Add vector drawable support (optional)
         vectorDrawables.useSupportLibrary = true
     }
-
-    // ... (rest of your configuration)
 }
 
 dependencies {
-    // Ensure all dependencies are compatible
+    // Import the Firebase BoM
+    implementation platform('com.google.firebase:firebase-bom:32.5.0')
+
+    // Firebase dependencies (don't specify versions when using BoM)
+    implementation 'com.google.firebase:firebase-auth'
+    implementation 'com.google.firebase:firebase-database'
+    implementation 'com.google.firebase:firebase-storage'
+    implementation 'com.google.firebase:firebase-messaging'
+
+    // AndroidX dependencies
     implementation 'androidx.appcompat:appcompat:1.7.0'
-    implementation 'com.google.android.material:material:1.12.0'
     implementation 'androidx.activity:activity:1.9.3'
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
-    implementation libs.firebase.auth
-    implementation libs.firebase.database
-    implementation libs.firebase.storage
+    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
+
+    // Material Design
+    implementation 'com.google.android.material:material:1.12.0'
+
+    // Glide (keep only one version)
     implementation 'com.github.bumptech.glide:glide:4.15.1'
     annotationProcessor 'com.github.bumptech.glide:compiler:4.15.1'
 
+    // Testing
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.2.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.swiperefreshlayout:swiperefreshlayout:1.1.0'
-    implementation 'com.google.firebase:firebase-messaging:24.0.3'
-    implementation 'com.google.firebase:firebase-storage:21.0.1'
-    implementation 'com.github.bumptech.glide:glide:4.15.1'
-    annotationProcessor 'com.github.bumptech.glide:compiler:4.15.1'
-
 }

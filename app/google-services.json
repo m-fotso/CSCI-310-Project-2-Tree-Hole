@@ -3,7 +3,7 @@
     "project_number": "68801923267",
     "firebase_url": "https://csci-310-tree-hole-database-default-rtdb.firebaseio.com",
     "project_id": "csci-310-tree-hole-database",
-    "storage_bucket": "csci-310-tree-hole-database.appspot.com"
+    "storage_bucket": "csci-310-tree-hole-database.firebasestorage.app"
   },
   "client": [
     {

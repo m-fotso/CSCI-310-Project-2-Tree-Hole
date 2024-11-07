@@ -72,15 +72,18 @@ public class NewPostActivity extends AppCompatActivity {
         String postId = postsRef.push().getKey();
         long timestamp = System.currentTimeMillis();
 
-        String authorName = isAnonymous ? "Anonymous" : userName;
+        Post newPost = new Post(postId, userId, userName, title, content, timestamp, isAnonymous);
+        newPost.setCategory(category);
 
-        Post newPost = new Post(postId, userId, authorName, title, content, timestamp, isAnonymous);
+        if (isAnonymous) {
+            // The Post constructor will automatically set up the first anonymous name
+            String anonymousName = newPost.getAnonymousNameForUser(userId);
+        }
 
         postsRef.child(postId).setValue(newPost)
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
                         Toast.makeText(NewPostActivity.this, "Post created successfully.", Toast.LENGTH_SHORT).show();
-                        // Notify subscribers
                         notifySubscribers(newPost);
                         finish();
                     } else {
@@ -97,13 +100,18 @@ public class NewPostActivity extends AppCompatActivity {
                 for (DataSnapshot userSnapshot : snapshot.getChildren()) {
                     String uid = userSnapshot.getKey();
                     if (!uid.equals(userId)) {
-                        Boolean isSubscribed = userSnapshot.child("subscriptions").child(category).getValue(Boolean.class);
+                        Boolean isSubscribed = userSnapshot.child("subscriptions")
+                                .child(category).getValue(Boolean.class);
                         if (isSubscribed != null && isSubscribed) {
-                            // Send notification to the user (e.g., save it in the database or use FCM)
-                            // For simplicity, we can add a notification node in the user's data
                             DatabaseReference notificationsRef = usersRef.child(uid).child("notifications");
                             String notificationId = notificationsRef.push().getKey();
-                            Notification notification = new Notification(notificationId, "New post in " + category, post.getTitle());
+                            String authorName = post.isAnonymous() ?
+                                    post.getAnonymousNameForUser(userId) : userName;
+                            Notification notification = new Notification(
+                                    notificationId,
+                                    "New post in " + category,
+                                    "New post: " + post.getTitle() + " by " + authorName
+                            );
                             notificationsRef.child(notificationId).setValue(notification);
                         }
                     }

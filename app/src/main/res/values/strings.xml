@@ -17,6 +17,7 @@
     <string name="select_role">Select Role</string>
     <string name="please_use_usc_email">Please use a valid USC email.</string>
     <string name="invalid_usc_id">Please enter a valid 10-digit USC ID.</string>
+    <string name="cancel_reply">Cancel Reply</string>
     <!-- Removed "profile_photo_selected" string -->
     <!-- Roles Array -->
     <string-array name="roles_array">

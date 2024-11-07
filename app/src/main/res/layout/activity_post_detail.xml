@@ -1,72 +1,169 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <LinearLayout
-        android:padding="16dp"
-        android:orientation="vertical"
+    <ScrollView
+        android:id="@+id/scroll_container"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="match_parent"
+        android:layout_above="@id/reply_container">
 
-        <!-- Post Details -->
+        <LinearLayout
+            android:padding="16dp"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Post Details Card -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                app:cardElevation="2dp"
+                app:cardCornerRadius="8dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="8dp">
+
+                        <ImageView
+                            android:id="@+id/post_author_image"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginEnd="12dp"
+                            android:src="@drawable/ic_default_profile"/>
+
+                        <TextView
+                            android:id="@+id/post_author_textview"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textStyle="bold"/>
+
+                        <!-- Only visible to post author -->
+                        <ImageButton
+                            android:id="@+id/edit_post_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/ic_edit"
+                            android:visibility="gone"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:padding="8dp"/>
+
+                        <ImageButton
+                            android:id="@+id/delete_post_button"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:src="@drawable/ic_delete"
+                            android:visibility="gone"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:padding="8dp"/>
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/post_title_textview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textStyle="bold"
+                        android:textSize="18sp"
+                        android:layout_marginTop="8dp"
+                        android:layout_marginBottom="8dp"/>
+
+                    <TextView
+                        android:id="@+id/post_content_textview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="8dp"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Replies Section -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/replies_recycler_view"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="true"/>
+
+        </LinearLayout>
+    </ScrollView>
+
+    <!-- Reply Input Container -->
+    <LinearLayout
+        android:id="@+id/reply_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_alignParentBottom="true"
+        android:background="@android:color/white"
+        android:elevation="4dp"
+        android:padding="8dp">
+
         <TextView
-            android:id="@+id/post_title_textview"
+            android:id="@+id/replying_to_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textStyle="bold"
-            android:textSize="18sp"
-            android:layout_marginBottom="8dp"/>
+            android:textStyle="italic"
+            android:textColor="@android:color/darker_gray"
+            android:visibility="gone"
+            android:padding="4dp"/>
 
-        <TextView
-            android:id="@+id/post_author_textview"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="8dp"/>
+        <Button
+            android:id="@+id/cancel_reply_button"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:text="Cancel Reply"
+            android:textSize="12sp"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_marginBottom="4dp"/>
 
-        <TextView
-            android:id="@+id/post_content_textview"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Replies List -->
-        <ListView
-            android:id="@+id/replies_list_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:nestedScrollingEnabled="true"
-            android:layout_marginBottom="16dp"/>
-
-        <!-- Reply Input -->
-        <EditText
-            android:id="@+id/reply_edittext"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Write a reply..."
-            android:layout_marginBottom="8dp"/>
-
-        <!-- Reply Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="end">
+            android:gravity="center_vertical">
 
-            <Button
-                android:id="@+id/anonymous_reply_button"
+            <EditText
+                android:id="@+id/reply_edittext"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Write a reply..."
+                android:maxLines="4"
+                android:padding="12dp"
+                android:background="@drawable/rounded_edittext_background"/>
+
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Anonymous Reply Off"
-                android:layout_marginEnd="16dp"/>
+                android:orientation="vertical"
+                android:layout_marginStart="8dp">
 
-            <Button
-                android:id="@+id/send_reply_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Send"/>
+                <Button
+                    android:id="@+id/anonymous_reply_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Anonymous Off"
+                    android:textSize="12sp"/>
 
+                <Button
+                    android:id="@+id/send_reply_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:text="Reply"/>
+            </LinearLayout>
         </LinearLayout>
-
     </LinearLayout>
-</ScrollView>
+
+</RelativeLayout>

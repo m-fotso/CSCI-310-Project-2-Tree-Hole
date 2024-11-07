@@ -256,34 +256,53 @@ public class PostListActivity extends AppCompatActivity {
     }
 
     private void loadHomePosts() {
-        postsRef.addValueEventListener(new ValueEventListener() {
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference()
+                .child("users").child(userId);
+
+        userRef.child("subscriptions").addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
-            public void onDataChange(DataSnapshot snapshot) {
-                postList.clear();
-                boolean hasSubscriptions = false;
+            public void onDataChange(DataSnapshot subscriptionSnapshot) {
+                Map<String, Boolean> subscriptions = new HashMap<>();
+                for (DataSnapshot subSnapshot : subscriptionSnapshot.getChildren()) {
+                    subscriptions.put(subSnapshot.getKey(),
+                            subSnapshot.getValue(Boolean.class));
+                }
 
-                for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
-                    String categoryName = categorySnapshot.getKey();
-                    Boolean isSubscribed = userSubscriptions.get(categoryName);
+                // Check if user has any active subscriptions
+                boolean hasActiveSubscriptions = subscriptions.values().stream()
+                        .anyMatch(value -> value != null && value);
 
-                    // If subscribed to this category, mark that we have subscriptions
-                    if (Boolean.TRUE.equals(isSubscribed)) {
-                        hasSubscriptions = true;
-                    }
+                postsRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        postList.clear();
+                        for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
+                            String categoryName = categorySnapshot.getKey();
+                            Boolean isSubscribed = subscriptions.get(categoryName);
 
-                    // If no subscriptions or subscribed to this category, add its posts
-                    if (!hasSubscriptions || Boolean.TRUE.equals(isSubscribed)) {
-                        for (DataSnapshot postSnapshot : categorySnapshot.getChildren()) {
-                            Post post = postSnapshot.getValue(Post.class);
-                            if (post != null) {
-                                post.setPostId(postSnapshot.getKey());
-                                post.setCategory(categoryName);
-                                postList.add(post);
+                            // Add posts if either:
+                            // 1. User has no active subscriptions (show all posts)
+                            // 2. User is subscribed to this category
+                            if (!hasActiveSubscriptions ||
+                                    (isSubscribed != null && isSubscribed)) {
+                                for (DataSnapshot postSnapshot : categorySnapshot.getChildren()) {
+                                    Post post = postSnapshot.getValue(Post.class);
+                                    if (post != null) {
+                                        post.setPostId(postSnapshot.getKey());
+                                        post.setCategory(categoryName);
+                                        postList.add(post);
+                                    }
+                                }
                             }
                         }
+                        finalizePosts();
                     }
-                }
-                finalizePosts();
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        handleLoadError(error);
+                    }
+                });
             }
 
             @Override
@@ -324,11 +343,7 @@ public class PostListActivity extends AppCompatActivity {
                 if (category != null) {
                     emptyStateText.setText("No posts in " + category);
                 } else {
-                    boolean hasSubscriptions = userSubscriptions != null &&
-                            userSubscriptions.containsValue(true);
-                    emptyStateText.setText(hasSubscriptions ?
-                            "No posts in subscribed categories" :
-                            "No posts yet");
+                    emptyStateText.setText("No posts in your feed");
                 }
             }
         } else {

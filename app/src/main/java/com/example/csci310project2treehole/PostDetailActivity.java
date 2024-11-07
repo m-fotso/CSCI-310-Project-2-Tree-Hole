@@ -1,33 +1,42 @@
 package com.example.csci310project2treehole;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.widget.*;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.*;
 
-import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.bumptech.glide.Glide;
 
-public class PostDetailActivity extends AppCompatActivity {
+import java.util.*;
 
+public class PostDetailActivity extends BaseActivity {
     private TextView postTitleTextView, postContentTextView, postAuthorTextView;
-    private ListView repliesListView;
+    private ImageView postAuthorImageView;
+    private RecyclerView repliesRecyclerView;
     private EditText replyEditText;
-    private Button sendReplyButton, anonymousReplyButton;
+    private Button sendReplyButton, anonymousReplyButton, cancelReplyButton;
+    private TextView replyingToText;
+    private ImageButton editPostButton, deletePostButton;
     private String category, postId;
     private DatabaseReference postRef;
     private FirebaseAuth mAuth;
     private String userId;
     private String userName;
     private boolean isAnonymous = false;
+    private Reply replyingTo = null;
+    private Post currentPost;
 
     private List<Reply> replyList;
-    private ReplyAdapter replyAdapter;
+    private Map<String, List<Reply>> nestedReplies;
+    private NestedReplyAdapter replyAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,68 +46,139 @@ public class PostDetailActivity extends AppCompatActivity {
         category = getIntent().getStringExtra("category");
         postId = getIntent().getStringExtra("postId");
 
+        initializeViews();
+        initializeFirebase();
+        setupClickListeners();
+        loadPostDetails();
+        loadReplies();
+    }
+
+    private void initializeViews() {
         postTitleTextView = findViewById(R.id.post_title_textview);
         postContentTextView = findViewById(R.id.post_content_textview);
         postAuthorTextView = findViewById(R.id.post_author_textview);
-        repliesListView = findViewById(R.id.replies_list_view);
+        postAuthorImageView = findViewById(R.id.post_author_image);
+        repliesRecyclerView = findViewById(R.id.replies_recycler_view);
         replyEditText = findViewById(R.id.reply_edittext);
         sendReplyButton = findViewById(R.id.send_reply_button);
         anonymousReplyButton = findViewById(R.id.anonymous_reply_button);
+        cancelReplyButton = findViewById(R.id.cancel_reply_button);
+        replyingToText = findViewById(R.id.replying_to_text);
+        editPostButton = findViewById(R.id.edit_post_button);
+        deletePostButton = findViewById(R.id.delete_post_button);
 
+        // Initialize RecyclerView
+        replyList = new ArrayList<>();
+        nestedReplies = new HashMap<>();
+        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
+        repliesRecyclerView.setLayoutManager(layoutManager);
+
+        // Initially hide UI elements
+        replyingToText.setVisibility(View.GONE);
+        cancelReplyButton.setVisibility(View.GONE);
+        editPostButton.setVisibility(View.GONE);
+        deletePostButton.setVisibility(View.GONE);
+    }
+
+    private void initializeFirebase() {
         mAuth = FirebaseAuth.getInstance();
         userId = mAuth.getCurrentUser().getUid();
-        postRef = FirebaseDatabase.getInstance().getReference("posts").child(category).child(postId);
+        postRef = databaseReference.child("posts").child(category).child(postId);
 
-        // Fetch the user's name from the database
-        FirebaseDatabase.getInstance().getReference("users").child(userId).child("name")
+        // Initialize adapter after postRef is set
+        replyAdapter = new NestedReplyAdapter(this, replyList, nestedReplies, this::startReplyToReply, postRef);
+        repliesRecyclerView.setAdapter(replyAdapter);
+
+        // Fetch user's name
+        databaseReference.child("users").child(userId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
-                        userName = snapshot.getValue(String.class);
+                        if (snapshot.exists()) {
+                            userName = snapshot.child("name").getValue(String.class);
+                        }
                     }
 
                     @Override
                     public void onCancelled(DatabaseError error) {
-                        Toast.makeText(PostDetailActivity.this, "Failed to load user data.", Toast.LENGTH_SHORT).show();
+                        showToast("Failed to load user data.");
                     }
                 });
+    }
 
-        // Load post details
-        loadPostDetails();
+    private void loadPostAuthorImage(String authorId, boolean isAnonymous) {
+        if (isAnonymous) {
+            postAuthorImageView.setImageResource(R.drawable.ic_default_profile);
+            return;
+        }
 
-        // Initialize replies list and adapter
-        replyList = new ArrayList<>();
-        replyAdapter = new ReplyAdapter(this, replyList);
-        repliesListView.setAdapter(replyAdapter);
+        databaseReference.child("users").child(authorId)
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        if (snapshot.exists() && snapshot.child("profileImageUrl").exists()) {
+                            String profileImageUrl = snapshot.child("profileImageUrl").getValue(String.class);
+                            if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
+                                Glide.with(PostDetailActivity.this)
+                                        .load(profileImageUrl)
+                                        .error(R.drawable.ic_default_profile)
+                                        .into(postAuthorImageView);
+                            } else {
+                                postAuthorImageView.setImageResource(R.drawable.ic_default_profile);
+                            }
+                        } else {
+                            postAuthorImageView.setImageResource(R.drawable.ic_default_profile);
+                        }
+                    }
 
-        // Load replies
-        loadReplies();
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        postAuthorImageView.setImageResource(R.drawable.ic_default_profile);
+                    }
+                });
+    }
 
-        // Handle send reply button click
+    private void setupClickListeners() {
         sendReplyButton.setOnClickListener(v -> sendReply());
 
-        // Handle anonymous reply button click
         anonymousReplyButton.setOnClickListener(v -> {
             isAnonymous = !isAnonymous;
             anonymousReplyButton.setText(isAnonymous ? "Anonymous Reply On" : "Anonymous Reply Off");
+            checkAnonymousStatus();
         });
+
+        cancelReplyButton.setOnClickListener(v -> cancelReply());
+        editPostButton.setOnClickListener(v -> showEditPostDialog());
+        deletePostButton.setOnClickListener(v -> showDeletePostDialog());
     }
 
     private void loadPostDetails() {
-        postRef.addListenerForSingleValueEvent(new ValueEventListener() {
+        postRef.addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
-                Post post = snapshot.getValue(Post.class);
-                if (post != null) {
-                    postTitleTextView.setText(post.getTitle());
-                    postContentTextView.setText(post.getContent());
-                    postAuthorTextView.setText("By: " + post.getAuthorName());
+                currentPost = snapshot.getValue(Post.class);
+                if (currentPost != null) {
+                    postTitleTextView.setText(currentPost.getTitle());
+                    postContentTextView.setText(currentPost.getContent());
+
+                    String authorDisplay = currentPost.getDisplayNameForUser(currentPost.getAuthorId(), currentPost.getAuthorName());
+                    postAuthorTextView.setText("By: " + authorDisplay);
+
+                    // Load author's profile image
+                    loadPostAuthorImage(currentPost.getAuthorId(), currentPost.isAnonymous());
+
+                    // Show edit/delete buttons if user is the author
+                    boolean isAuthor = currentPost.getAuthorId().equals(userId);
+                    editPostButton.setVisibility(isAuthor ? View.VISIBLE : View.GONE);
+                    deletePostButton.setVisibility(isAuthor ? View.VISIBLE : View.GONE);
+
+                    checkAnonymousStatus();
                 }
             }
 
             @Override
             public void onCancelled(DatabaseError error) {
-                Toast.makeText(PostDetailActivity.this, "Failed to load post details.", Toast.LENGTH_SHORT).show();
+                showToast("Failed to load post details.");
             }
         });
     }
@@ -108,41 +188,182 @@ public class PostDetailActivity extends AppCompatActivity {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 replyList.clear();
+                nestedReplies.clear();
+                Map<String, Reply> allReplies = new HashMap<>();
+
+                // First pass: collect all replies
                 for (DataSnapshot replySnapshot : snapshot.getChildren()) {
                     Reply reply = replySnapshot.getValue(Reply.class);
-                    replyList.add(reply);
+                    if (reply != null) {
+                        reply.setReplyId(replySnapshot.getKey());
+                        allReplies.put(reply.getReplyId(), reply);
+                    }
                 }
+
+                // Second pass: organize replies into parent-child relationships
+                for (Reply reply : allReplies.values()) {
+                    if (reply.getParentReplyId() == null) {
+                        replyList.add(reply);
+                    } else {
+                        nestedReplies.computeIfAbsent(reply.getParentReplyId(), k -> new ArrayList<>())
+                                .add(reply);
+                    }
+                }
+
+                // Sort replies by timestamp
+                replyList.sort((r1, r2) -> Long.compare(r2.getTimestamp(), r1.getTimestamp()));
+                for (List<Reply> nested : nestedReplies.values()) {
+                    nested.sort((r1, r2) -> Long.compare(r1.getTimestamp(), r2.getTimestamp()));
+                }
+
                 replyAdapter.notifyDataSetChanged();
+                checkAnonymousStatus();
             }
 
             @Override
             public void onCancelled(DatabaseError error) {
-                Toast.makeText(PostDetailActivity.this, "Failed to load replies.", Toast.LENGTH_SHORT).show();
+                showToast("Failed to load replies.");
             }
         });
     }
 
+    private void checkAnonymousStatus() {
+        if (currentPost != null && !currentPost.getUserAnonymousStatus().containsKey(userId)) {
+            // User hasn't participated yet, allow them to choose
+            anonymousReplyButton.setEnabled(true);
+        } else if (currentPost != null) {
+            // Lock in the user's anonymous status
+            Boolean userStatus = currentPost.getUserAnonymousStatus().get(userId);
+            if (userStatus != null) {
+                isAnonymous = userStatus;
+                anonymousReplyButton.setText(isAnonymous ? "Anonymous Reply On" : "Anonymous Reply Off");
+                anonymousReplyButton.setEnabled(false);
+            }
+        }
+    }
+
+    private void startReplyToReply(Reply parentReply) {
+        replyingTo = parentReply;
+        replyingToText.setText("Replying to: " + parentReply.getDisplayName());
+        replyingToText.setVisibility(View.VISIBLE);
+        cancelReplyButton.setVisibility(View.VISIBLE);
+        replyEditText.requestFocus();
+    }
+
+    private void cancelReply() {
+        replyingTo = null;
+        replyingToText.setVisibility(View.GONE);
+        cancelReplyButton.setVisibility(View.GONE);
+        replyEditText.setText("");
+    }
+
+    private void showEditPostDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_edit_post, null);
+
+        EditText titleEdit = dialogView.findViewById(R.id.edit_title);
+        EditText contentEdit = dialogView.findViewById(R.id.edit_content);
+
+        titleEdit.setText(currentPost.getTitle());
+        contentEdit.setText(currentPost.getContent());
+
+        builder.setView(dialogView)
+                .setTitle("Edit Post")
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String newTitle = titleEdit.getText().toString().trim();
+                    String newContent = contentEdit.getText().toString().trim();
+
+                    if (!TextUtils.isEmpty(newTitle) && !TextUtils.isEmpty(newContent)) {
+                        updatePost(newTitle, newContent);
+                    } else {
+                        showToast("Title and content cannot be empty");
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showDeletePostDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("Delete Post")
+                .setMessage("Are you sure you want to delete this post? This will also delete all replies.")
+                .setPositiveButton("Delete", (dialog, which) -> deletePost())
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void updatePost(String newTitle, String newContent) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("title", newTitle);
+        updates.put("content", newContent);
+
+        postRef.updateChildren(updates)
+                .addOnSuccessListener(aVoid -> showToast("Post updated successfully"))
+                .addOnFailureListener(e -> showToast("Failed to update post"));
+    }
+
+    private void deletePost() {
+        postRef.removeValue()
+                .addOnSuccessListener(aVoid -> {
+                    showToast("Post deleted successfully");
+                    finish();
+                })
+                .addOnFailureListener(e -> showToast("Failed to delete post"));
+    }
+
     private void sendReply() {
-        String content = replyEditText.getText().toString().trim();
+        final String content = replyEditText.getText().toString().trim();
         if (TextUtils.isEmpty(content)) {
-            Toast.makeText(this, "Reply cannot be empty.", Toast.LENGTH_SHORT).show();
+            showToast("Reply cannot be empty.");
             return;
         }
 
         String replyId = postRef.child("replies").push().getKey();
-        long timestamp = System.currentTimeMillis();
-        String authorName = isAnonymous ? "Anonymous" : userName;
+        if (replyId == null) {
+            showToast("Error creating reply.");
+            return;
+        }
 
-        Reply newReply = new Reply(replyId, userId, authorName, content, timestamp, isAnonymous);
+        // Set or update the user's anonymous status in the post
+        if (!currentPost.getUserAnonymousStatus().containsKey(userId)) {
+            // First time user is participating in this post
+            Map<String, Object> statusUpdate = new HashMap<>();
+            statusUpdate.put("userAnonymousStatus/" + userId, isAnonymous);
+            postRef.updateChildren(statusUpdate);
+        }
+
+        Reply newReply = new Reply(
+                replyId,
+                userId,
+                userName,
+                content,
+                System.currentTimeMillis(),
+                isAnonymous,
+                replyingTo != null ? replyingTo.getReplyId() : null,
+                replyingTo != null ? replyingTo.getDisplayName() : null
+        );
+
+        if (isAnonymous) {
+            String anonymousName = currentPost.getAnonymousNameForUser(userId);
+            newReply.setAnonymousName(anonymousName);
+
+            // Update the post's anonymous users mapping
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("anonymousUsers", currentPost.getAnonymousUsers());
+            updates.put("nextAnonymousNumber", currentPost.getNextAnonymousNumber());
+            postRef.updateChildren(updates);
+        }
 
         postRef.child("replies").child(replyId).setValue(newReply)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(PostDetailActivity.this, "Reply sent.", Toast.LENGTH_SHORT).show();
-                        replyEditText.setText("");
-                    } else {
-                        Toast.makeText(PostDetailActivity.this, "Failed to send reply.", Toast.LENGTH_SHORT).show();
-                    }
-                });
+                .addOnSuccessListener(aVoid -> {
+                    showToast("Reply sent.");
+                    replyEditText.setText("");
+                    cancelReply();
+                })
+                .addOnFailureListener(e -> showToast("Failed to send reply."));
+    }
+
+    private void showToast(String message) {
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 }

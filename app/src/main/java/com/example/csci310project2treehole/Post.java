@@ -12,12 +12,14 @@ public class Post {
     private long timestamp;
     private boolean isAnonymous;
     private Map<String, Reply> replies;
+    private String category;  // New field
 
     public Post() {
         // Default constructor required for calls to DataSnapshot.getValue(Post.class)
     }
 
-    public Post(String postId, String authorId, String authorName, String title, String content, long timestamp, boolean isAnonymous) {
+    public Post(String postId, String authorId, String authorName, String title,
+                String content, long timestamp, boolean isAnonymous) {
         this.postId = postId;
         this.authorId = authorId;
         this.authorName = authorName;
@@ -28,7 +30,18 @@ public class Post {
         this.replies = new HashMap<>();
     }
 
-    // Getter and Setter for postId
+    // Existing getters and setters...
+
+    // New getters and setters for category
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    // All existing getters and setters
     public String getPostId() {
         return postId;
     }
@@ -37,7 +50,6 @@ public class Post {
         this.postId = postId;
     }
 
-    // Getter and Setter for authorId
     public String getAuthorId() {
         return authorId;
     }
@@ -46,7 +58,6 @@ public class Post {
         this.authorId = authorId;
     }
 
-    // Getter and Setter for authorName
     public String getAuthorName() {
         return authorName;
     }
@@ -55,7 +66,6 @@ public class Post {
         this.authorName = authorName;
     }
 
-    // Getter and Setter for title
     public String getTitle() {
         return title;
     }
@@ -64,7 +74,6 @@ public class Post {
         this.title = title;
     }
 
-    // Getter and Setter for content
     public String getContent() {
         return content;
     }
@@ -73,7 +82,6 @@ public class Post {
         this.content = content;
     }
 
-    // Getter and Setter for timestamp
     public long getTimestamp() {
         return timestamp;
     }
@@ -82,7 +90,6 @@ public class Post {
         this.timestamp = timestamp;
     }
 
-    // Getter and Setter for isAnonymous
     public boolean isAnonymous() {
         return isAnonymous;
     }
@@ -91,7 +98,6 @@ public class Post {
         isAnonymous = anonymous;
     }
 
-    // Getter and Setter for replies
     public Map<String, Reply> getReplies() {
         return replies;
     }
@@ -100,4 +106,3 @@ public class Post {
         this.replies = replies;
     }
 }
-

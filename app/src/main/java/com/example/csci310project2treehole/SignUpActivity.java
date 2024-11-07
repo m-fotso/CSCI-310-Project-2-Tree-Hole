@@ -1,47 +1,75 @@
 package com.example.csci310project2treehole;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Patterns;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
-import com.example.csci310project2treehole.User;
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 public class SignUpActivity extends AppCompatActivity {
-
     private static final String TAG = "SignUpActivity";
+    private static final int PERMISSION_REQUEST_CODE = 123;
 
     private FirebaseAuth mAuth;
     private DatabaseReference databaseReference;
+    private StorageReference storageReference;
+
+    private ImageView profileImageView;
     private EditText nameEditText, emailEditText, passwordEditText, uscidEditText;
     private Spinner roleSpinner;
-    private Button signupButton, backToLoginButton;
+    private Button selectPhotoButton, signupButton, backToLoginButton;
+
+    private Uri selectedImageUri = null;
+    private ActivityResultLauncher<String> imagePickerLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signup);
 
-        // Initialize Firebase Auth and Database Reference
+        // Initialize Firebase
         mAuth = FirebaseAuth.getInstance();
         databaseReference = FirebaseDatabase.getInstance().getReference();
+        storageReference = FirebaseStorage.getInstance().getReference();
 
-        // Connect UI components
+        initializeViews();
+        setupSpinner();
+        setupImagePicker();
+        setupClickListeners();
+    }
+
+    private void initializeViews() {
+        profileImageView = findViewById(R.id.profile_image);
+        selectPhotoButton = findViewById(R.id.select_photo_button);
         nameEditText = findViewById(R.id.name);
         emailEditText = findViewById(R.id.semail);
         passwordEditText = findViewById(R.id.spassword);
@@ -49,14 +77,34 @@ public class SignUpActivity extends AppCompatActivity {
         roleSpinner = findViewById(R.id.role_spinner);
         signupButton = findViewById(R.id.signup_button);
         backToLoginButton = findViewById(R.id.back_to_login_button);
+    }
 
-        // Set up the spinner with roles
+    private void setupSpinner() {
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
                 R.array.roles_array, android.R.layout.simple_spinner_item);
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         roleSpinner.setAdapter(adapter);
+    }
 
-        // Handle sign-up button click
+    private void setupImagePicker() {
+        imagePickerLauncher = registerForActivityResult(
+                new ActivityResultContracts.GetContent(),
+                uri -> {
+                    if (uri != null) {
+                        selectedImageUri = uri;
+                        Glide.with(this)
+                                .load(uri)
+                                .circleCrop()
+                                .placeholder(R.drawable.ic_default_profile)
+                                .into(profileImageView);
+                    }
+                }
+        );
+    }
+
+    private void setupClickListeners() {
+        selectPhotoButton.setOnClickListener(v -> checkPermissionAndPickImage());
+
         signupButton.setOnClickListener(v -> {
             String name = nameEditText.getText().toString().trim();
             String email = emailEditText.getText().toString().trim();
@@ -65,45 +113,59 @@ public class SignUpActivity extends AppCompatActivity {
             String role = roleSpinner.getSelectedItem().toString();
 
             if (validateInputs(name, email, password, uscid)) {
+                signupButton.setEnabled(false);
                 addUser(name, email, password, uscid, role);
             }
         });
 
-        // Handle back to login button click
         backToLoginButton.setOnClickListener(v -> {
-            // Navigate back to LoginActivity
-            Intent intent = new Intent(SignUpActivity.this, LoginActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(SignUpActivity.this, LoginActivity.class));
             finish();
         });
     }
 
+    private void checkPermissionAndPickImage() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_IMAGES)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_MEDIA_IMAGES},
+                        PERMISSION_REQUEST_CODE);
+            } else {
+                imagePickerLauncher.launch("image/*");
+            }
+        } else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                        PERMISSION_REQUEST_CODE);
+            } else {
+                imagePickerLauncher.launch("image/*");
+            }
+        }
+    }
+
     private boolean validateInputs(String name, String email, String password, String uscid) {
-        if (TextUtils.isEmpty(name) || TextUtils.isEmpty(email) || TextUtils.isEmpty(password)
-                || TextUtils.isEmpty(uscid)) {
+        if (TextUtils.isEmpty(name) || TextUtils.isEmpty(email) ||
+                TextUtils.isEmpty(password) || TextUtils.isEmpty(uscid)) {
             Toast.makeText(this, getString(R.string.please_fill_all_fields), Toast.LENGTH_SHORT).show();
             return false;
         }
 
-        // Validate email format
         if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             Toast.makeText(this, "Please enter a valid email address.", Toast.LENGTH_SHORT).show();
             return false;
         }
 
-        // Validate USC email
         if (!email.endsWith("@usc.edu")) {
             Toast.makeText(this, getString(R.string.please_use_usc_email), Toast.LENGTH_SHORT).show();
             return false;
         }
 
-        // Validate USC ID (assuming it's a 10-digit number)
         if (uscid.length() != 10 || !TextUtils.isDigitsOnly(uscid)) {
             Toast.makeText(this, getString(R.string.invalid_usc_id), Toast.LENGTH_SHORT).show();
             return false;
         }
 
-        // Validate password length (Firebase requires at least 6 characters)
         if (password.length() < 6) {
             Toast.makeText(this, "Password must be at least 6 characters.", Toast.LENGTH_SHORT).show();
             return false;
@@ -113,59 +175,91 @@ public class SignUpActivity extends AppCompatActivity {
     }
 
     private void addUser(String name, String email, String password, String uscid, String role) {
-        // Create user in Firebase Authentication
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
-                        // Get user ID
                         FirebaseUser firebaseUser = mAuth.getCurrentUser();
                         if (firebaseUser != null) {
                             String userId = firebaseUser.getUid();
-                            Log.d(TAG, "createUserWithEmail:success, userId: " + userId);
-
-                            // Use a default profile image URL (replace with actual URL or handle image upload later)
-                            String profileImageUrl = "default_profile_image_url";
-
-                            // Initialize subscriptions
-                            Map<String, Boolean> subscriptions = new HashMap<>();
-                            subscriptions.put("Academic", false);
-                            subscriptions.put("Life", false);
-                            subscriptions.put("Event", false);
-
-                            // Create a user object
-                            User newUser = new User(name, email, uscid, role, profileImageUrl, subscriptions);
-
-                            // Save user to Firebase Realtime Database
-                            databaseReference.child("users").child(userId).setValue(newUser)
-                                    .addOnCompleteListener(task1 -> {
-                                        if (task1.isSuccessful()) {
-                                            Toast.makeText(SignUpActivity.this, getString(R.string.account_created), Toast.LENGTH_SHORT).show();
-                                            Log.d(TAG, "User data saved successfully.");
-
-                                            // Redirect to MainActivity
-                                            Intent intent = new Intent(SignUpActivity.this, MainActivity.class);
-                                            startActivity(intent);
-                                            finish();
-                                        } else {
-                                            Toast.makeText(SignUpActivity.this, "Failed to save user data.", Toast.LENGTH_SHORT).show();
-                                            Log.e(TAG, "Failed to save user data.", task1.getException());
-                                        }
-                                    });
-                        } else {
-                            Toast.makeText(SignUpActivity.this, "Sign Up failed: User is null.", Toast.LENGTH_LONG).show();
-                            Log.e(TAG, "Sign Up failed: User is null.");
+                            if (selectedImageUri != null) {
+                                uploadImageAndCreateUser(selectedImageUri, userId, name, email, uscid, role);
+                            } else {
+                                createUserWithDefaultImage(userId, name, email, uscid, role);
+                            }
                         }
                     } else {
-                        Exception exception = task.getException();
-                        if (exception != null) {
-                            Toast.makeText(SignUpActivity.this, "Sign Up failed: " + exception.getMessage(), Toast.LENGTH_LONG).show();
-                            Log.e(TAG, "Sign Up failed", exception);
-                        } else {
-                            Toast.makeText(SignUpActivity.this, "Sign Up failed: Unknown error.", Toast.LENGTH_LONG).show();
-                        }
+                        signupButton.setEnabled(true);
+                        String errorMessage = task.getException() != null ?
+                                task.getException().getMessage() : "Unknown error";
+                        Toast.makeText(SignUpActivity.this,
+                                "Sign Up failed: " + errorMessage, Toast.LENGTH_LONG).show();
                     }
                 });
     }
-}
 
+    private void uploadImageAndCreateUser(Uri imageUri, String userId,
+                                          String name, String email, String uscid, String role) {
+        String imagePath = "profile_images/" + userId + "_" + UUID.randomUUID().toString();
+        StorageReference imageRef = storageReference.child(imagePath);
+
+        UploadTask uploadTask = imageRef.putFile(imageUri);
+        uploadTask.continueWithTask(task -> {
+            if (!task.isSuccessful()) {
+                throw task.getException();
+            }
+            return imageRef.getDownloadUrl();
+        }).addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                String imageUrl = task.getResult().toString();
+                createUserWithImage(userId, name, email, uscid, role, imageUrl);
+            } else {
+                signupButton.setEnabled(true);
+                Toast.makeText(SignUpActivity.this,
+                        "Failed to upload image", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void createUserWithDefaultImage(String userId,
+                                            String name, String email, String uscid, String role) {
+        createUserWithImage(userId, name, email, uscid, role, "default_profile_image_url");
+    }
+
+    private void createUserWithImage(String userId, String name, String email,
+                                     String uscid, String role, String imageUrl) {
+        Map<String, Boolean> subscriptions = new HashMap<>();
+        subscriptions.put("Academic", false);
+        subscriptions.put("Life", false);
+        subscriptions.put("Events", false);
+
+        User newUser = new User(name, email, uscid, role, imageUrl, subscriptions);
+
+        databaseReference.child("users").child(userId).setValue(newUser)
+                .addOnCompleteListener(task -> {
+                    signupButton.setEnabled(true);
+                    if (task.isSuccessful()) {
+                        Toast.makeText(SignUpActivity.this,
+                                getString(R.string.account_created), Toast.LENGTH_SHORT).show();
+                        startActivity(new Intent(SignUpActivity.this, MainActivity.class));
+                        finish();
+                    } else {
+                        Toast.makeText(SignUpActivity.this,
+                                "Failed to save user data.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                imagePickerLauncher.launch("image/*");
+            } else {
+                Toast.makeText(this, "Permission required for image selection",
+                        Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+}
 

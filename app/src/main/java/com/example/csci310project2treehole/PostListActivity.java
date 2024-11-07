@@ -20,7 +20,9 @@ import com.google.firebase.database.*;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PostListActivity extends AppCompatActivity {
     private Toolbar toolbar;
@@ -41,6 +43,7 @@ public class PostListActivity extends AppCompatActivity {
     private List<Post> postList;
     private PostAdapter postAdapter;
     private SubscriptionManager subscriptionManager;
+    private Map<String, Boolean> userSubscriptions;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,9 +64,8 @@ public class PostListActivity extends AppCompatActivity {
         setupClickListeners();
         setupBottomNavigation();
 
-        // Load initial data
-        loadPosts();
-        checkSubscriptionStatus();
+        // Load user subscriptions first, then posts
+        loadUserSubscriptions();
     }
 
     private void initializeViews() {
@@ -77,59 +79,6 @@ public class PostListActivity extends AppCompatActivity {
         subscriptionChip = findViewById(R.id.subscription_chip);
         emptyStateView = findViewById(R.id.empty_state_layout);
         mainContentView = findViewById(R.id.main_content);
-    }
-
-    private void setupToolbar() {
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayShowTitleEnabled(false);
-        }
-        toolbarTitle.setText(category != null ? "USC Tree Hole - " + category : "USC Tree Hole");
-    }
-
-    private void setupPostsList() {
-        postList = new ArrayList<>();
-        postAdapter = new PostAdapter(this, postList);
-        postsListView.setAdapter(postAdapter);
-
-        // Set item click listener for posts
-        postsListView.setOnItemClickListener((parent, view, position, id) -> {
-            Post post = postList.get(position);
-            Intent intent = new Intent(PostListActivity.this, PostDetailActivity.class);
-            intent.putExtra("category", category);
-            intent.putExtra("postId", post.getPostId());
-            startActivity(intent);
-        });
-
-        // Setup swipe refresh
-        swipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary, R.color.colorAccent);
-        swipeRefreshLayout.setOnRefreshListener(this::loadPosts);
-    }
-
-    private void setupClickListeners() {
-        profileButton.setOnClickListener(v -> {
-            Intent intent = new Intent(PostListActivity.this, ProfileActivity.class);
-            startActivity(intent);
-        });
-
-        fabNewPost.setOnClickListener(v -> {
-            Intent intent = new Intent(PostListActivity.this, NewPostActivity.class);
-            intent.putExtra("category", category);
-            startActivity(intent);
-        });
-
-        subscriptionChip.setOnClickListener(v -> toggleSubscription());
-
-        if (emptyStateView != null) {
-            View createFirstPostButton = emptyStateView.findViewById(R.id.create_first_post_button);
-            if (createFirstPostButton != null) {
-                createFirstPostButton.setOnClickListener(v -> {
-                    Intent intent = new Intent(PostListActivity.this, NewPostActivity.class);
-                    intent.putExtra("category", category);
-                    startActivity(intent);
-                });
-            }
-        }
     }
 
     private void setupBottomNavigation() {
@@ -184,42 +133,185 @@ public class PostListActivity extends AppCompatActivity {
         });
     }
 
-    private void loadPosts() {
-        DatabaseReference ref = category != null ?
-                postsRef.child(category) :
-                postsRef;  // For home feed, look at all categories
+    private void setupToolbar() {
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        }
+        toolbarTitle.setText(category != null ? "USC Tree Hole - " + category : "USC Tree Hole - Home");
+    }
 
-        ref.addValueEventListener(new ValueEventListener() {
+    private void setupPostsList() {
+        postList = new ArrayList<>();
+        postAdapter = new PostAdapter(this, postList);
+        postsListView.setAdapter(postAdapter);
+
+        postsListView.setOnItemClickListener((parent, view, position, id) -> {
+            Post post = postList.get(position);
+            if (post != null && post.getPostId() != null) {
+                Intent intent = new Intent(PostListActivity.this, PostDetailActivity.class);
+                intent.putExtra("category", category != null ? category :
+                        getCategoryForPost(post.getPostId()));
+                intent.putExtra("postId", post.getPostId());
+                startActivity(intent);
+            }
+        });
+
+        swipeRefreshLayout.setColorSchemeResources(R.color.colorPrimary, R.color.colorAccent);
+        swipeRefreshLayout.setOnRefreshListener(this::refreshPosts);
+    }
+
+    private String getCategoryForPost(String postId) {
+        for (Post post : postList) {
+            if (post.getPostId().equals(postId)) {
+                return post.getCategory();
+            }
+        }
+        return null;
+    }
+
+    private void setupClickListeners() {
+        profileButton.setOnClickListener(v ->
+                startActivity(new Intent(PostListActivity.this, ProfileActivity.class)));
+
+        fabNewPost.setOnClickListener(v -> {
+            Intent intent = new Intent(PostListActivity.this, NewPostActivity.class);
+            if (category != null) {
+                intent.putExtra("category", category);
+            }
+            startActivity(intent);
+        });
+
+        subscriptionChip.setOnClickListener(v -> toggleSubscription());
+
+        if (emptyStateView != null) {
+            View createFirstPostButton = emptyStateView.findViewById(R.id.create_first_post_button);
+            if (createFirstPostButton != null) {
+                createFirstPostButton.setOnClickListener(v -> {
+                    Intent intent = new Intent(PostListActivity.this, NewPostActivity.class);
+                    if (category != null) {
+                        intent.putExtra("category", category);
+                    }
+                    startActivity(intent);
+                });
+            }
+        }
+    }
+
+    private void loadUserSubscriptions() {
+        DatabaseReference userRef = FirebaseDatabase.getInstance().getReference()
+                .child("users").child(userId);
+
+        userRef.child("subscriptions").addListenerForSingleValueEvent(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                userSubscriptions = new HashMap<>();
+                for (DataSnapshot subSnapshot : snapshot.getChildren()) {
+                    userSubscriptions.put(subSnapshot.getKey(),
+                            subSnapshot.getValue(Boolean.class));
+                }
+                loadPosts();
+                checkSubscriptionStatus();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                Toast.makeText(PostListActivity.this,
+                        "Failed to load subscriptions", Toast.LENGTH_SHORT).show();
+                userSubscriptions = new HashMap<>();
+                loadPosts();
+            }
+        });
+    }
+
+    private void loadPosts() {
+        if (category != null) {
+            loadCategoryPosts();
+        } else {
+            loadHomePosts();
+        }
+    }
+
+    private void loadCategoryPosts() {
+        postsRef.child(category).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
                 postList.clear();
                 for (DataSnapshot postSnapshot : snapshot.getChildren()) {
                     Post post = postSnapshot.getValue(Post.class);
                     if (post != null) {
+                        post.setPostId(postSnapshot.getKey());
+                        post.setCategory(category);
                         postList.add(post);
                     }
                 }
-
-                // Sort posts by timestamp (newest first)
-                Collections.sort(postList, (p1, p2) ->
-                        Long.compare(p2.getTimestamp(), p1.getTimestamp()));
-
-                // Update UI based on whether there are posts
-                updateEmptyState();
-
-                postAdapter.notifyDataSetChanged();
-                swipeRefreshLayout.setRefreshing(false);
+                finalizePosts();
             }
 
             @Override
             public void onCancelled(DatabaseError error) {
-                Toast.makeText(PostListActivity.this,
-                        "Failed to load posts: " + error.getMessage(),
-                        Toast.LENGTH_SHORT).show();
-                swipeRefreshLayout.setRefreshing(false);
-                updateEmptyState();
+                handleLoadError(error);
             }
         });
+    }
+
+    private void loadHomePosts() {
+        postsRef.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot snapshot) {
+                postList.clear();
+                boolean hasSubscriptions = false;
+
+                for (DataSnapshot categorySnapshot : snapshot.getChildren()) {
+                    String categoryName = categorySnapshot.getKey();
+                    Boolean isSubscribed = userSubscriptions.get(categoryName);
+
+                    // If subscribed to this category, mark that we have subscriptions
+                    if (Boolean.TRUE.equals(isSubscribed)) {
+                        hasSubscriptions = true;
+                    }
+
+                    // If no subscriptions or subscribed to this category, add its posts
+                    if (!hasSubscriptions || Boolean.TRUE.equals(isSubscribed)) {
+                        for (DataSnapshot postSnapshot : categorySnapshot.getChildren()) {
+                            Post post = postSnapshot.getValue(Post.class);
+                            if (post != null) {
+                                post.setPostId(postSnapshot.getKey());
+                                post.setCategory(categoryName);
+                                postList.add(post);
+                            }
+                        }
+                    }
+                }
+                finalizePosts();
+            }
+
+            @Override
+            public void onCancelled(DatabaseError error) {
+                handleLoadError(error);
+            }
+        });
+    }
+
+    private void finalizePosts() {
+        Collections.sort(postList, (p1, p2) ->
+                Long.compare(p2.getTimestamp(), p1.getTimestamp()));
+        updateEmptyState();
+        postAdapter.notifyDataSetChanged();
+        swipeRefreshLayout.setRefreshing(false);
+    }
+
+    private void handleLoadError(DatabaseError error) {
+        Toast.makeText(PostListActivity.this,
+                "Failed to load posts: " + error.getMessage(),
+                Toast.LENGTH_SHORT).show();
+        swipeRefreshLayout.setRefreshing(false);
+        updateEmptyState();
+    }
+
+    private void refreshPosts() {
+        swipeRefreshLayout.setRefreshing(true);
+        loadUserSubscriptions();
     }
 
     private void updateEmptyState() {
@@ -227,13 +319,16 @@ public class PostListActivity extends AppCompatActivity {
             emptyStateView.setVisibility(View.VISIBLE);
             mainContentView.setVisibility(View.GONE);
 
-            // Update empty state message based on category
             TextView emptyStateText = emptyStateView.findViewById(R.id.empty_state_text);
             if (emptyStateText != null) {
                 if (category != null) {
-                    emptyStateText.setText("No posts yet in " + category);
+                    emptyStateText.setText("No posts in " + category);
                 } else {
-                    emptyStateText.setText("No posts in your subscribed categories");
+                    boolean hasSubscriptions = userSubscriptions != null &&
+                            userSubscriptions.containsValue(true);
+                    emptyStateText.setText(hasSubscriptions ?
+                            "No posts in subscribed categories" :
+                            "No posts yet");
                 }
             }
         } else {
@@ -243,19 +338,10 @@ public class PostListActivity extends AppCompatActivity {
     }
 
     private void checkSubscriptionStatus() {
-        if (category != null) {  // Only show subscription chip for specific categories
+        if (category != null) {
             subscriptionChip.setVisibility(View.VISIBLE);
-            subscriptionManager.checkSubscription(category, new SubscriptionManager.SubscriptionCallback() {
-                @Override
-                public void onSuccess(boolean isSubscribed) {
-                    subscriptionChip.setChecked(isSubscribed);
-                }
-
-                @Override
-                public void onError(String error) {
-                    Toast.makeText(PostListActivity.this, error, Toast.LENGTH_SHORT).show();
-                }
-            });
+            Boolean isSubscribed = userSubscriptions.get(category);
+            subscriptionChip.setChecked(Boolean.TRUE.equals(isSubscribed));
         } else {
             subscriptionChip.setVisibility(View.GONE);
         }
@@ -268,6 +354,9 @@ public class PostListActivity extends AppCompatActivity {
             @Override
             public void onSuccess(boolean result) {
                 subscriptionChip.setChecked(result);
+                if (userSubscriptions != null) {
+                    userSubscriptions.put(category, result);
+                }
                 String message = result ?
                         "Subscribed to " + category :
                         "Unsubscribed from " + category;
@@ -284,6 +373,6 @@ public class PostListActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        loadPosts();  // Refresh posts when returning to the activity
+        refreshPosts();
     }
 }

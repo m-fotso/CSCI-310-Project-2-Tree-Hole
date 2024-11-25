@@ -6,8 +6,8 @@ import java.util.Vector;
 public class AnonymousTest {
     Boolean result;
     protected void onCreate(Bundle savedInstanceState) {
-        testAnonymousReply();
-        Log.d("Mytag", "Test result was" + result.toString());
+        //testAnonymousReply();
+        //Log.d("Mytag", "Test result was" + result.toString());
     }
 
     public void testInvalidPost() {

@@ -1,6 +1,15 @@
 package com.example.csci310project2treehole;
+import android.os.Bundle;
+import android.util.Log;
 import java.util.Vector;
+
 public class AnonymousTest {
+    Boolean result;
+    protected void onCreate(Bundle savedInstanceState) {
+        testAnonymousReply();
+        Log.d("Mytag", "Test result was" + result.toString());
+    }
+
     public void testInvalidPost() {
         Post post1 = new Post("id", "author", "name", "", "content", 0L, true);
         Post post2 = new Post("id", "author", "name", "title", "", 0L, true);
@@ -27,7 +36,7 @@ public class AnonymousTest {
         Post post = new Post("id", "author", "name", "", "content", 0L, true);
         Reply reply = new Reply("id1", "id","author1", "content", 0L, true, "id", "author");
         String name = reply.getAnonymousName();
-        assertEquals(name, "Anonymous 1");
+        result = assertEquals(name, "Anonymous 1");
     }
     public Boolean assertEquals(String actual, String expected) {
         return (actual.equals(expected));

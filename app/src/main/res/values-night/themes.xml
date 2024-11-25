@@ -2,7 +2,7 @@
     <!-- Base application theme. -->
     <style name="Theme.CSCI310Project2TreeHole" parent="Theme.MaterialComponents.DayNight.DarkActionBar">
         <!-- Customize your dark theme here. -->
-        
+
         <!-- Remove action bar for toolbar -->
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>

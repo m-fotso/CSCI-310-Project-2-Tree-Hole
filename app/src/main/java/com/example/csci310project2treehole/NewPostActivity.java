@@ -39,6 +39,9 @@ public class NewPostActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         userId = mAuth.getCurrentUser().getUid();
+        if(category == null) {
+            category = "Academic";
+        }
         postsRef = FirebaseDatabase.getInstance().getReference("posts").child(category);
 
         // Fetch the user's name from the database

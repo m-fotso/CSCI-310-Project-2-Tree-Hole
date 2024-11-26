@@ -52,4 +52,5 @@ public class PostDetailActivityTest {
         // Verify anonymous identifier appears
         onView(withText("Anonymous 1")).check(matches(isDisplayed()));
     }
+
 }

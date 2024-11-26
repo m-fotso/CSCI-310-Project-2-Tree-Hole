@@ -68,31 +68,35 @@ public class NewPostActivity extends AppCompatActivity {
         boolean isAnonymous = anonymousCheckBox.isChecked();
 
         if (TextUtils.isEmpty(title) || TextUtils.isEmpty(content)) {
-            Toast.makeText(this, "Title and content cannot be empty.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Title and/or content cannot be empty.", Toast.LENGTH_SHORT).show();
             return;
         }
 
         String postId = postsRef.push().getKey();
         long timestamp = System.currentTimeMillis();
 
-        Post newPost = new Post(postId, userId, userName, title, content, timestamp, isAnonymous);
-        newPost.setCategory(category);
+        if(!content.isEmpty() || !title.isEmpty()) {
+            Post newPost = new Post(postId, userId, userName, title, content, timestamp, isAnonymous);
+            newPost.setCategory(category);
 
-        if (isAnonymous) {
-            // The Post constructor will automatically set up the first anonymous name
-            String anonymousName = newPost.getAnonymousNameForUser(userId);
+            if (isAnonymous) {
+                // The Post constructor will automatically set up the first anonymous name
+                String anonymousName = newPost.getAnonymousNameForUser(userId);
+            }
+
+            postsRef.child(postId).setValue(newPost)
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(NewPostActivity.this, "Post created successfully.", Toast.LENGTH_SHORT).show();
+                            notifySubscribers(newPost);
+                            finish();
+                        } else {
+                            Toast.makeText(NewPostActivity.this, "Failed to create post.", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        } else {
+            Toast.makeText(NewPostActivity.this, "Failed to create post.", Toast.LENGTH_SHORT).show();
         }
-
-        postsRef.child(postId).setValue(newPost)
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        Toast.makeText(NewPostActivity.this, "Post created successfully.", Toast.LENGTH_SHORT).show();
-                        notifySubscribers(newPost);
-                        finish();
-                    } else {
-                        Toast.makeText(NewPostActivity.this, "Failed to create post.", Toast.LENGTH_SHORT).show();
-                    }
-                });
     }
 
     private void notifySubscribers(Post post) {

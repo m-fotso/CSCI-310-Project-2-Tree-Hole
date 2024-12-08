@@ -59,6 +59,11 @@
             android:name=".CategoryActivity"
             android:exported="false" />
 
+        <!-- CategoryDetailActivity -->
+        <activity
+            android:name=".CategoryDetailActivity"
+            android:exported="false" />
+
         <!-- PostListActivity -->
         <activity
             android:name=".PostListActivity"

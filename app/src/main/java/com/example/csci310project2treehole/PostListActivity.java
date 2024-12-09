@@ -171,14 +171,21 @@ public class PostListActivity extends AppCompatActivity {
         postAdapter = new PostAdapter(this, postList);
         postsListView.setAdapter(postAdapter);
 
+        // Add animation to list items
+        android.view.animation.LayoutAnimationController animation =
+                android.view.animation.AnimationUtils.loadLayoutAnimation(this, R.anim.layout_animation_fall_down);
+        postsListView.setLayoutAnimation(animation);
+
         postsListView.setOnItemClickListener((parent, view, position, id) -> {
             Post post = postList.get(position);
             if (post != null && post.getPostId() != null) {
-                Intent intent = new Intent(PostListActivity.this, PostDetailActivity.class);
-                intent.putExtra("category", category != null ? category :
-                        getCategoryForPost(post.getPostId()));
-                intent.putExtra("postId", post.getPostId());
-                startActivity(intent);
+                AnimUtils.buttonClickAnimation(view, () -> {
+                    Intent intent = new Intent(PostListActivity.this, PostDetailActivity.class);
+                    intent.putExtra("category", category != null ? category :
+                            getCategoryForPost(post.getPostId()));
+                    intent.putExtra("postId", post.getPostId());
+                    startActivity(intent);
+                });
             }
         });
 
@@ -341,6 +348,7 @@ public class PostListActivity extends AppCompatActivity {
         Collections.sort(postList, (p1, p2) ->
                 Long.compare(p2.getTimestamp(), p1.getTimestamp()));
         updateEmptyState();
+        AnimUtils.fadeIn(postsListView, 300);
         postAdapter.notifyDataSetChanged();
         swipeRefreshLayout.setRefreshing(false);
     }
@@ -354,12 +362,16 @@ public class PostListActivity extends AppCompatActivity {
     }
 
     private void refreshPosts() {
-        swipeRefreshLayout.setRefreshing(true);
-        loadUserSubscriptions();
+        AnimUtils.fadeOut(postsListView, 300, () -> {
+            swipeRefreshLayout.setRefreshing(true);
+            loadUserSubscriptions();
+        });
     }
 
     private void updateEmptyState() {
         if (postList.isEmpty()) {
+            AnimUtils.fadeIn(emptyStateView, 300);
+            AnimUtils.fadeOut(mainContentView, 300, null);
             emptyStateView.setVisibility(View.VISIBLE);
             mainContentView.setVisibility(View.GONE);
 
@@ -372,6 +384,8 @@ public class PostListActivity extends AppCompatActivity {
                 }
             }
         } else {
+            AnimUtils.fadeOut(emptyStateView, 300, null);
+            AnimUtils.fadeIn(mainContentView, 300);
             emptyStateView.setVisibility(View.GONE);
             mainContentView.setVisibility(View.VISIBLE);
         }

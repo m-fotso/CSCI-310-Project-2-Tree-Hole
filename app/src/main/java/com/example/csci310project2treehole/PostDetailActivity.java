@@ -135,7 +135,10 @@ public class PostDetailActivity extends BaseActivity {
     }
 
     private void setupClickListeners() {
-        sendReplyButton.setOnClickListener(v -> sendReply());
+//        sendReplyButton.setOnClickListener(v -> sendReply());
+        sendReplyButton.setOnClickListener(v -> {
+            AnimUtils.buttonClickAnimation(v, this::sendReply);
+        });
 
         anonymousReplyButton.setOnClickListener(v -> {
             isAnonymous = !isAnonymous;
@@ -143,7 +146,10 @@ public class PostDetailActivity extends BaseActivity {
             checkAnonymousStatus();
         });
 
-        cancelReplyButton.setOnClickListener(v -> cancelReply());
+//        cancelReplyButton.setOnClickListener(v -> cancelReply());
+        cancelReplyButton.setOnClickListener(v -> {
+            AnimUtils.buttonClickAnimation(v, this::cancelReply);
+        });
         editPostButton.setOnClickListener(v -> showEditPostDialog());
         deletePostButton.setOnClickListener(v -> showDeletePostDialog());
     }
@@ -209,6 +215,13 @@ public class PostDetailActivity extends BaseActivity {
                 for (List<Reply> nested : nestedReplies.values()) {
                     nested.sort((r1, r2) -> Long.compare(r1.getTimestamp(), r2.getTimestamp()));
                 }
+
+                // Animate the changes
+                AnimUtils.fadeOut(repliesRecyclerView, 150, () -> {
+                    replyAdapter.notifyDataSetChanged();
+                    AnimUtils.fadeIn(repliesRecyclerView, 150);
+                });
+
 
                 replyAdapter.notifyDataSetChanged();
                 checkAnonymousStatus();

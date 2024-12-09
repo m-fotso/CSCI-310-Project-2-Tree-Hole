@@ -35,22 +35,4 @@ public class PostListActivityTest {
         onView(withId(R.id.password))
                 .check(matches(isDisplayed()));
     }
-
-    public void testPostAnonymous() {
-        // Toggle anonymous mode
-        onView(withId(R.id.anonymous_reply_button)).perform(click());
-
-        // Add anonymous post
-        onView(withId(R.id.fab_new_post)).perform(click());
-        onView(withId(R.id.post_title_edittext))
-                .perform(typeText("Test Academic Post"), closeSoftKeyboard());
-        onView(withId(R.id.post_content_edittext))
-                .perform(typeText("This is a test post content"), closeSoftKeyboard());
-        onView(withId(R.id.post_button)).perform(click());
-
-        // Verify anonymous identifier appears
-        onView(withText("Anonymous 1")).check(matches(isDisplayed()));
-    }
-
-
 }

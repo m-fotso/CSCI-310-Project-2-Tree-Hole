@@ -10,10 +10,9 @@ import android.widget.*;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.database.*;
-
-import com.bumptech.glide.Glide;
 
 import java.util.*;
 
@@ -67,13 +66,11 @@ public class PostDetailActivity extends BaseActivity {
         editPostButton = findViewById(R.id.edit_post_button);
         deletePostButton = findViewById(R.id.delete_post_button);
 
-        // Initialize RecyclerView
         replyList = new ArrayList<>();
         nestedReplies = new HashMap<>();
         LinearLayoutManager layoutManager = new LinearLayoutManager(this);
         repliesRecyclerView.setLayoutManager(layoutManager);
 
-        // Initially hide UI elements
         replyingToText.setVisibility(View.GONE);
         cancelReplyButton.setVisibility(View.GONE);
         editPostButton.setVisibility(View.GONE);
@@ -85,11 +82,9 @@ public class PostDetailActivity extends BaseActivity {
         userId = mAuth.getCurrentUser().getUid();
         postRef = databaseReference.child("posts").child(category).child(postId);
 
-        // Initialize adapter after postRef is set
         replyAdapter = new NestedReplyAdapter(this, replyList, nestedReplies, this::startReplyToReply, postRef);
         repliesRecyclerView.setAdapter(replyAdapter);
 
-        // Fetch user's name
         databaseReference.child("users").child(userId)
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
@@ -106,21 +101,22 @@ public class PostDetailActivity extends BaseActivity {
                 });
     }
 
-    private void loadPostAuthorImage(String authorId, boolean isAnonymous) {
+    private void loadAuthorProfileImage(String authorId, boolean isAnonymous) {
         if (isAnonymous) {
             postAuthorImageView.setImageResource(R.drawable.ic_default_profile);
             return;
         }
 
-        databaseReference.child("users").child(authorId)
+        databaseReference.child("users").child(authorId).child("profileImageUrl")
                 .addListenerForSingleValueEvent(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot snapshot) {
-                        if (snapshot.exists() && snapshot.child("profileImageUrl").exists()) {
-                            String profileImageUrl = snapshot.child("profileImageUrl").getValue(String.class);
-                            if (profileImageUrl != null && !profileImageUrl.isEmpty()) {
+                        if (snapshot.exists()) {
+                            String imageUrl = snapshot.getValue(String.class);
+                            if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.equals("default_profile_image_url")) {
                                 Glide.with(PostDetailActivity.this)
-                                        .load(profileImageUrl)
+                                        .load(imageUrl)
+                                        .placeholder(R.drawable.ic_default_profile)
                                         .error(R.drawable.ic_default_profile)
                                         .into(postAuthorImageView);
                             } else {
@@ -164,10 +160,8 @@ public class PostDetailActivity extends BaseActivity {
                     String authorDisplay = currentPost.getDisplayNameForUser(currentPost.getAuthorId(), currentPost.getAuthorName());
                     postAuthorTextView.setText("By: " + authorDisplay);
 
-                    // Load author's profile image
-                    loadPostAuthorImage(currentPost.getAuthorId(), currentPost.isAnonymous());
+                    loadAuthorProfileImage(currentPost.getAuthorId(), currentPost.isAnonymous());
 
-                    // Show edit/delete buttons if user is the author
                     boolean isAuthor = currentPost.getAuthorId().equals(userId);
                     editPostButton.setVisibility(isAuthor ? View.VISIBLE : View.GONE);
                     deletePostButton.setVisibility(isAuthor ? View.VISIBLE : View.GONE);
@@ -324,9 +318,7 @@ public class PostDetailActivity extends BaseActivity {
             return;
         }
 
-        // Set or update the user's anonymous status in the post
         if (!currentPost.getUserAnonymousStatus().containsKey(userId)) {
-            // First time user is participating in this post
             Map<String, Object> statusUpdate = new HashMap<>();
             statusUpdate.put("userAnonymousStatus/" + userId, isAnonymous);
             postRef.updateChildren(statusUpdate);
@@ -347,7 +339,6 @@ public class PostDetailActivity extends BaseActivity {
             String anonymousName = currentPost.getAnonymousNameForUser(userId);
             newReply.setAnonymousName(anonymousName);
 
-            // Update the post's anonymous users mapping
             Map<String, Object> updates = new HashMap<>();
             updates.put("anonymousUsers", currentPost.getAnonymousUsers());
             updates.put("nextAnonymousNumber", currentPost.getNextAnonymousNumber());

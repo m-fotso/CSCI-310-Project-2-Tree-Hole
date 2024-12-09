@@ -12,6 +12,7 @@ public class User {
 
     // Default constructor required for calls to DataSnapshot.getValue(User.class)
     public User() {
+        this.profileImageUrl = "default_profile_image_url";
     }
 
     public User(String name, String email, String uscid, String role, String profileImageUrl, Map<String, Boolean> subscriptions) {
@@ -19,11 +20,9 @@ public class User {
         this.email = email;
         this.uscid = uscid;
         this.role = role;
-        this.profileImageUrl = profileImageUrl;
+        this.profileImageUrl = profileImageUrl != null ? profileImageUrl : "default_profile_image_url";
         this.subscriptions = subscriptions;
     }
-
-    // Getters and Setters
 
     public String getName() {
         return name;
@@ -32,8 +31,6 @@ public class User {
     public void setName(String name) {
         this.name = name;
     }
-
-    // Similarly for other fields...
 
     public String getEmail() {
         return email;

@@ -10,8 +10,13 @@ import android.widget.*;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -27,6 +32,7 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
     private final String currentUserId;
     private final SimpleDateFormat dateFormat;
     private final DatabaseReference postRef;
+    private final DatabaseReference usersRef;
 
     public interface OnReplyClickListener {
         void onReplyClick(Reply reply);
@@ -41,6 +47,7 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
         this.nestedReplies = nestedReplies;
         this.replyClickListener = replyClickListener;
         this.postRef = postRef;
+        this.usersRef = FirebaseDatabase.getInstance().getReference("users");
         this.currentUserId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         this.dateFormat = new SimpleDateFormat("MMM dd, yyyy hh:mm a", Locale.getDefault());
     }
@@ -55,7 +62,7 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
     @Override
     public void onBindViewHolder(@NonNull ReplyViewHolder holder, int position) {
         Reply reply = replies.get(position);
-        holder.bind(reply, 0); // 0 is the initial indentation level
+        holder.bind(reply, 0);
     }
 
     @Override
@@ -65,6 +72,7 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
 
     class ReplyViewHolder extends RecyclerView.ViewHolder {
         private final View indentationSpace;
+        private final ImageView authorImageView;
         private final TextView authorTextView;
         private final TextView contentTextView;
         private final TextView timestampTextView;
@@ -77,6 +85,7 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
         ReplyViewHolder(@NonNull View itemView) {
             super(itemView);
             indentationSpace = itemView.findViewById(R.id.indentation_space);
+            authorImageView = itemView.findViewById(R.id.reply_author_image);
             authorTextView = itemView.findViewById(R.id.reply_author_textview);
             contentTextView = itemView.findViewById(R.id.reply_content_textview);
             timestampTextView = itemView.findViewById(R.id.reply_timestamp_textview);
@@ -86,13 +95,47 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
             deleteButton = itemView.findViewById(R.id.delete_reply_button);
         }
 
+        private void loadProfileImage(String userId, boolean isAnonymous) {
+            if (isAnonymous) {
+                authorImageView.setImageResource(R.drawable.ic_default_profile);
+                return;
+            }
+
+            usersRef.child(userId).child("profileImageUrl").addListenerForSingleValueEvent(new ValueEventListener() {
+                @Override
+                public void onDataChange(DataSnapshot snapshot) {
+                    if (snapshot.exists()) {
+                        String imageUrl = snapshot.getValue(String.class);
+                        if (imageUrl != null && !imageUrl.isEmpty() && !imageUrl.equals("default_profile_image_url")) {
+                            Glide.with(context)
+                                    .load(imageUrl)
+                                    .placeholder(R.drawable.ic_default_profile)
+                                    .error(R.drawable.ic_default_profile)
+                                    .into(authorImageView);
+                        } else {
+                            authorImageView.setImageResource(R.drawable.ic_default_profile);
+                        }
+                    } else {
+                        authorImageView.setImageResource(R.drawable.ic_default_profile);
+                    }
+                }
+
+                @Override
+                public void onCancelled(DatabaseError error) {
+                    authorImageView.setImageResource(R.drawable.ic_default_profile);
+                }
+            });
+        }
+
         void bind(Reply reply, int indentationLevel) {
-            // Set indentation width based on level
             ViewGroup.LayoutParams params = indentationSpace.getLayoutParams();
             params.width = indentationLevel * context.getResources()
                     .getDimensionPixelSize(R.dimen.reply_indentation_width);
             indentationSpace.setLayoutParams(params);
             indentationSpace.setVisibility(indentationLevel > 0 ? View.VISIBLE : View.GONE);
+
+            // Load profile image
+            loadProfileImage(reply.getAuthorId(), reply.isAnonymous());
 
             // Set reply content
             authorTextView.setText(reply.getDisplayName());
@@ -114,7 +157,6 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
                     isExpanded = !isExpanded;
                     updateRepliesCount(nested.size());
                     if (isExpanded) {
-                        // Show nested replies
                         int position = getAdapterPosition();
                         if (position != RecyclerView.NO_POSITION) {
                             for (int i = 0; i < nested.size(); i++) {
@@ -123,7 +165,6 @@ public class NestedReplyAdapter extends RecyclerView.Adapter<NestedReplyAdapter.
                             notifyItemRangeInserted(position + 1, nested.size());
                         }
                     } else {
-                        // Hide nested replies
                         int position = getAdapterPosition();
                         if (position != RecyclerView.NO_POSITION) {
                             for (int i = 0; i < nested.size(); i++) {

@@ -75,6 +75,11 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- NotificationsActivity -->
+        <activity
+            android:name=".NotificationsActivity"
+            android:exported="false" />
+
         <!-- Firebase Service for Notifications -->
         <service
             android:name=".FirebaseMessagingService"
@@ -105,5 +110,4 @@
         </provider>
 
     </application>
-
 </manifest>

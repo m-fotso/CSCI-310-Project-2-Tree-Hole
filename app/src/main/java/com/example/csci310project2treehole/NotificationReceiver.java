@@ -19,15 +19,11 @@ public class NotificationReceiver extends BroadcastReceiver {
         if (intent.getAction() != null &&
                 intent.getAction().equals("android.intent.action.BOOT_COMPLETED")) {
 
-            // Re-initialize notification settings after device reboot
-            SubscriptionManager subscriptionManager = new SubscriptionManager(context);
-
-            // Check if user is logged in
             FirebaseAuth auth = FirebaseAuth.getInstance();
             if (auth.getCurrentUser() != null) {
                 String userId = auth.getCurrentUser().getUid();
 
-                // Re-check subscriptions and update notification settings
+                // Re-initialize notification settings
                 FirebaseDatabase.getInstance().getReference("users")
                         .child(userId)
                         .child("subscriptions")
@@ -41,6 +37,7 @@ public class NotificationReceiver extends BroadcastReceiver {
 
                                         if (isSubscribed != null && isSubscribed) {
                                             Log.d(TAG, "Re-subscribing to category: " + category);
+                                            setupCategoryListener(context, userId, category);
                                         }
                                     }
                                 }
@@ -53,5 +50,34 @@ public class NotificationReceiver extends BroadcastReceiver {
                         });
             }
         }
+    }
+
+    private void setupCategoryListener(Context context, String userId, String category) {
+        FirebaseDatabase.getInstance()
+                .getReference("posts")
+                .child(category)
+                .addValueEventListener(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(DataSnapshot snapshot) {
+                        // Handle new posts
+                        for (DataSnapshot postSnapshot : snapshot.getChildren()) {
+                            Post post = postSnapshot.getValue(Post.class);
+                            if (post != null && post.getTimestamp() > System.currentTimeMillis() - 300000) { // Last 5 minutes
+                                NotificationHelper.createNotification(
+                                        context,
+                                        "New Post in " + category,
+                                        post.getTitle(),
+                                        postSnapshot.getKey(),
+                                        category
+                                );
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onCancelled(DatabaseError error) {
+                        Log.e(TAG, "Failed to listen for new posts", error.toException());
+                    }
+                });
     }
 }

@@ -26,7 +26,7 @@ import java.util.Map;
 
 public class PostListActivity extends AppCompatActivity {
     private Toolbar toolbar;
-    private ImageButton profileButton;
+    private ImageButton profileButton, notificationButton;
     private TextView toolbarTitle;
     private BottomNavigationView bottomNavigationView;
     private SwipeRefreshLayout swipeRefreshLayout;
@@ -72,6 +72,7 @@ public class PostListActivity extends AppCompatActivity {
         toolbar = findViewById(R.id.toolbar);
         toolbarTitle = findViewById(R.id.toolbar_title);
         profileButton = findViewById(R.id.profile_button);
+        notificationButton = findViewById(R.id.notification_button);
         bottomNavigationView = findViewById(R.id.bottom_navigation);
         swipeRefreshLayout = findViewById(R.id.swipe_refresh);
         postsListView = findViewById(R.id.posts_list_view);
@@ -79,6 +80,27 @@ public class PostListActivity extends AppCompatActivity {
         subscriptionChip = findViewById(R.id.subscription_chip);
         emptyStateView = findViewById(R.id.empty_state_layout);
         mainContentView = findViewById(R.id.main_content);
+    }
+
+    private void setupToolbar() {
+        setSupportActionBar(toolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayShowTitleEnabled(false);
+        }
+        String titleText = category != null ? "USC Tree Hole - " + category : "USC Tree Hole - Home";
+        toolbarTitle.setText(titleText);
+
+        // Setup notification button
+        notificationButton.setOnClickListener(v -> {
+            Intent notificationIntent = new Intent(PostListActivity.this, NotificationsActivity.class);
+            startActivity(notificationIntent);
+        });
+
+        // Setup profile button
+        profileButton.setOnClickListener(v -> {
+            Intent profileIntent = new Intent(PostListActivity.this, ProfileActivity.class);
+            startActivity(profileIntent);
+        });
     }
 
     private void setupBottomNavigation() {
@@ -131,14 +153,6 @@ public class PostListActivity extends AppCompatActivity {
             finish();
             return true;
         });
-    }
-
-    private void setupToolbar() {
-        setSupportActionBar(toolbar);
-        if (getSupportActionBar() != null) {
-            getSupportActionBar().setDisplayShowTitleEnabled(false);
-        }
-        toolbarTitle.setText(category != null ? "USC Tree Hole - " + category : "USC Tree Hole - Home");
     }
 
     private void setupPostsList() {

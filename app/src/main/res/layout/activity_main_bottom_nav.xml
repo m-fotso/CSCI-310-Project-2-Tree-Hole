@@ -13,28 +13,53 @@
         android:background="@color/colorPrimary"
         android:elevation="4dp">
 
-        <!-- Title TextView -->
-        <TextView
-            android:id="@+id/toolbar_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="USC Tree Hole"
-            android:textColor="@android:color/white"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            android:layout_gravity="center"
-            android:gravity="center" />
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
 
-        <!-- Profile Button -->
-        <ImageButton
-            android:id="@+id/profile_button"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="end"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_profile"
-            android:contentDescription="Profile"
-            app:tint="@android:color/white" />
+            <!-- Title TextView -->
+            <TextView
+                android:id="@+id/toolbar_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="USC Tree Hole"
+                android:textColor="@android:color/white"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_centerInParent="true" />
+
+            <!-- Notification Bell -->
+            <ImageButton
+                android:id="@+id/notification_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_toStartOf="@id/profile_button"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="8dp"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_notifications"
+                android:contentDescription="Notifications"
+                app:tint="@android:color/white" />
+
+            <!-- Profile Button -->
+            <ImageButton
+                android:id="@+id/profile_button"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:layout_marginEnd="8dp"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_profile"
+                android:contentDescription="Profile"
+                app:tint="@android:color/white" />
+
+        </RelativeLayout>
+
     </androidx.appcompat.widget.Toolbar>
 
     <!-- Content Frame -->

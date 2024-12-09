@@ -81,3 +81,21 @@ USC Tree Hole is an Android application developed to help students, faculty, and
    - Subscribe to categories to receive notifications for new posts.
    - Ensure that your device allows notifications for the app.
 
+## Sprint Summary: Enhancing USC Tree Hole Application
+
+Key Implementations
+
+1. **Profile Picture Integration:**
+    - Displayed user-uploaded profile pictures on posts and replies.
+    - Used Glide for image loading and caching.
+    - Added a default fallback for anonymous posts or missing images.
+
+2. **Notification System:**
+   - Implemented a notification bell UI
+   - Added subscription tracking for categories.
+   - Integrated Firebase Cloud Messaging for real-time notifications.
+
+3. **Category Management:**
+   - Enabled category navigation and creation.
+   - Connected Firebase to allow dynamic category addition.
+   - Verified with test posts in each category.

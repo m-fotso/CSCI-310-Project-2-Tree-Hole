@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/category_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp">
@@ -14,13 +20,21 @@
         android:titleTextColor="@android:color/white"
         android:layout_alignParentTop="true"/>
 
-    <!-- ListView for Categories -->
-    <ListView
-        android:id="@+id/category_list_view"
+    <androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+        android:id="@+id/category_swipe_refresh"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/category_toolbar"
-        android:layout_marginTop="16dp"/>
+        android:layout_height="match_parent"
+        android:layout_marginBottom="56dp">
+
+        <!-- RecyclerView for Categories -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/category_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@id/category_toolbar"
+            android:layout_marginTop="16dp" />
+    </androidx.swiperefreshlayout.widget.SwipeRefreshLayout>
+
 
     <!-- Back Button -->
     <Button
@@ -30,4 +44,28 @@
         android:text="Back"
         android:layout_alignParentBottom="true"/>
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_new_category"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentEnd="true"
+        android:layout_alignParentBottom="true"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="72dp"
+        android:src="@drawable/ic_add"
+        app:backgroundTint="@color/colorPrimary"
+        app:tint="@color/white" />
+
 </RelativeLayout>
+
+    <!-- Empty State -->
+    <include
+        android:id="@+id/category_empty_state_layout"
+        layout="@layout/layout_empty_state"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

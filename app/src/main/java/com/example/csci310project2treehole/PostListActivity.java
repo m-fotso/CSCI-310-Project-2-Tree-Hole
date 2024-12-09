@@ -136,6 +136,8 @@ public class PostListActivity extends AppCompatActivity {
                 newCategory = "Life";
             } else if (itemId == R.id.nav_events) {
                 newCategory = "Events";
+            } else if (itemId == R.id.nav_categories) {
+                newCategory = "Extra";
             }
             // nav_home case stays as null
 
@@ -143,6 +145,15 @@ public class PostListActivity extends AppCompatActivity {
             if ((category == null && newCategory == null) ||
                     (category != null && category.equals(newCategory))) {
                 return true;
+            }
+
+            if(newCategory != null) {
+                if (newCategory.equals("Extra")) {
+                    Intent intent = new Intent(PostListActivity.this, CategoryActivity.class);
+                    startActivity(intent);
+                    finish();
+                    return true;
+                }
             }
 
             Intent intent = new Intent(PostListActivity.this, PostListActivity.class);
